@@ -1,12 +1,20 @@
+import { auth } from '@clerk/nextjs/server';
 import { DesktopSidebar } from '@/components/layout/desktop-sidebar';
 import { MobileNav } from '@/components/layout/mobile-nav';
+import { OrganizationOnboarding } from '@/components/layout/organization-onboarding';
 import { TopBar } from '@/components/layout/top-bar';
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+
+  if (!session.orgId) {
+    return <OrganizationOnboarding />;
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       <DesktopSidebar />
