@@ -1,22 +1,19 @@
-import { Settings } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { getTenantSettingsOverview } from '@/modules/organizations/application/settings-service';
+import { SettingsManagement } from '@/components/settings/settings-management';
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const overview = await getTenantSettingsOverview();
+
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4 p-4">
       <div>
         <h1 className="text-xl font-bold">Impostazioni</h1>
         <p className="text-sm text-muted-foreground">
-          Spazio base per configurazioni tenant, negozi, preferenze operative e billing placeholder.
+          Configurazioni tenant, negozi, limiti piano e attivazione moduli operativi.
         </p>
       </div>
 
-      <Card className="flex items-start gap-3">
-        <Settings className="mt-0.5 h-5 w-5 text-accent" />
-        <div className="text-sm text-muted-foreground">
-          La struttura di navigazione è ora allineata; qui potremo inserire limiti piano, feature flags e dati del negozio.
-        </div>
-      </Card>
+      <SettingsManagement overview={overview} />
     </div>
   );
 }

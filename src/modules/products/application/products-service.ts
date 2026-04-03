@@ -3,6 +3,7 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/supabase/audit';
 import { requireTenantContext } from '@/lib/auth/tenant';
+import { assertCanCreateProduct } from '@/modules/billing/application/billing-service';
 import type { Product, ProductVariant } from '@/types/database';
 
 // ---------- Products ----------
@@ -65,6 +66,7 @@ export async function createProduct(input: {
   notes?: string;
 }) {
   const { orgId, userId } = await requireTenantContext();
+  await assertCanCreateProduct(orgId);
   const db = createServiceClient();
 
   const { data, error } = await db

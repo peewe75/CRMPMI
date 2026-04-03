@@ -1,7 +1,9 @@
+import { requireFeatureEnabled } from '@/lib/auth/feature-flags';
 import { resolveBarcode } from '@/modules/products/application/products-service';
 import { jsonOk, jsonError, withErrorHandler } from '@/lib/utils/api';
 
 export const POST = withErrorHandler(async (request: Request) => {
+  await requireFeatureEnabled('barcode_scan', 'scanner barcode');
   const body = await request.json();
   const { barcode } = body as { barcode: string };
 

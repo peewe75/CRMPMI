@@ -1,5 +1,7 @@
 import { requireTenantContext } from '@/lib/auth/tenant';
+import { requireFeatureEnabled } from '@/lib/auth/feature-flags';
 import { createServiceClient } from '@/lib/supabase/server';
+import { assertCanUploadDocument } from '@/modules/billing/application/billing-service';
 import { createDocumentRecord } from '@/modules/documents/application/documents-service';
 import { jsonOk, jsonError, withErrorHandler } from '@/lib/utils/api';
 
@@ -16,6 +18,8 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 export const POST = withErrorHandler(async (request: Request) => {
   const { orgId } = await requireTenantContext();
+  await requireFeatureEnabled('document_import', 'import documenti');
+  await assertCanUploadDocument(orgId);
 
   const formData = await request.formData();
   const file = formData.get('file') as File | null;

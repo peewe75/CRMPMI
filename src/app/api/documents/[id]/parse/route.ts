@@ -4,6 +4,7 @@ import {
   updateDocumentStatus,
   saveLineItems,
 } from '@/modules/documents/application/documents-service';
+import { requireFeatureEnabled } from '@/lib/auth/feature-flags';
 import { getDocumentParser } from '@/modules/documents/infrastructure/parser-registry';
 import { jsonOk, jsonError, withErrorHandler } from '@/lib/utils/api';
 
@@ -11,6 +12,7 @@ export const POST = withErrorHandler(async (
   _request: Request,
   context: unknown
 ) => {
+  await requireFeatureEnabled('document_import', 'import documenti');
   const { id } = await (context as { params: Promise<{ id: string }> }).params;
 
   const document = await getDocument(id);

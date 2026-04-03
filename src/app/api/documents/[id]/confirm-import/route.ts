@@ -1,4 +1,5 @@
 import { requireTenantContext } from '@/lib/auth/tenant';
+import { requireFeatureEnabled } from '@/lib/auth/feature-flags';
 import { createServiceClient } from '@/lib/supabase/server';
 import {
   getDocumentWithLines,
@@ -261,6 +262,7 @@ export const POST = withErrorHandler(async (
   request: Request,
   context: unknown
 ) => {
+  await requireFeatureEnabled('document_import', 'import documenti');
   const { orgId, userId } = await requireTenantContext();
   const db = createServiceClient();
   const { id } = await (context as { params: Promise<{ id: string }> }).params;
