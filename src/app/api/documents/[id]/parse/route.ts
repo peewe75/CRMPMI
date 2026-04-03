@@ -15,7 +15,7 @@ export const POST = withErrorHandler(async (
 
   const document = await getDocument(id);
 
-  if (!['uploaded', 'failed'].includes(document.status)) {
+  if (!['uploaded', 'failed', 'needs_review', 'parsed'].includes(document.status)) {
     return jsonError(`Documento in stato ${document.status}, non può essere ri-parsato`);
   }
 

@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   // PWA headers and caching handled at Vercel/CDN layer
   // next-pwa v5 has compatibility issues with App Router;
   // we use a manual service worker registration approach instead.
+  serverExternalPackages: ['@napi-rs/canvas', 'pdf-parse'],
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
