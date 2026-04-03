@@ -2,18 +2,11 @@ import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { getCurrentOrganizationFeatureFlags } from '@/lib/auth/feature-flags';
 import { Card } from '@/components/ui/card';
+import { getVisibleMorePageLinks } from '@/lib/navigation/dashboard-navigation';
 
 export default async function MorePage() {
   const featureFlags = await getCurrentOrganizationFeatureFlags();
-
-  const links = [
-    { href: '/dashboard/quick-add', label: 'Quick add' },
-    featureFlags.voice_input ? { href: '/dashboard/voice', label: 'Input vocale' } : null,
-    { href: '/dashboard/movements', label: 'Movimenti' },
-    { href: '/dashboard/variants', label: 'Varianti' },
-    { href: '/dashboard/users', label: 'Utenti e ruoli' },
-    { href: '/dashboard/settings', label: 'Impostazioni' },
-  ].filter(Boolean) as Array<{ href: string; label: string }>;
+  const links = getVisibleMorePageLinks(featureFlags);
 
   return (
     <div className="space-y-4 p-4">

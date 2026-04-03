@@ -2,35 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Home,
-  Package,
-  Layers,
-  Warehouse,
-  ArrowRightLeft,
-  FileText,
-  Users,
-  Settings,
-  ScanBarcode,
-  Mic,
-} from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import type { FeatureFlags } from '@/types/database';
-
-const SIDEBAR_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/dashboard/products', label: 'Prodotti', icon: Package },
-  { href: '/dashboard/variants', label: 'Varianti', icon: Layers },
-  { href: '/dashboard/inventory', label: 'Magazzino', icon: Warehouse },
-  { href: '/dashboard/movements', label: 'Movimenti', icon: ArrowRightLeft },
-  { href: '/dashboard/documents', label: 'Documenti', icon: FileText, feature: 'document_import' as const },
-  { type: 'separator' as const, label: 'Strumenti' },
-  { href: '/dashboard/scan', label: 'Scanner', icon: ScanBarcode, feature: 'barcode_scan' as const },
-  { href: '/dashboard/voice', label: 'Input Vocale', icon: Mic, feature: 'voice_input' as const },
-  { type: 'separator' as const, label: 'Impostazioni' },
-  { href: '/dashboard/users', label: 'Utenti', icon: Users },
-  { href: '/dashboard/settings', label: 'Impostazioni', icon: Settings },
-] as const;
+import { getVisibleSidebarItems } from '@/lib/navigation/dashboard-navigation';
 
 export function DesktopSidebar({
   featureFlags,
@@ -38,17 +12,7 @@ export function DesktopSidebar({
   featureFlags: FeatureFlags;
 }) {
   const pathname = usePathname();
-  const visibleItems = SIDEBAR_ITEMS.filter((item) => {
-    if ('type' in item) {
-      return true;
-    }
-
-    if (!('feature' in item) || !item.feature) {
-      return true;
-    }
-
-    return featureFlags[item.feature];
-  });
+  const visibleItems = getVisibleSidebarItems(featureFlags);
 
   return (
     <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-border md:bg-white">
@@ -61,7 +25,7 @@ export function DesktopSidebar({
       <nav className="flex-1 overflow-y-auto p-3">
         <ul className="space-y-0.5">
           {visibleItems.map((item, i) => {
-            if ('type' in item && item.type === 'separator') {
+            if (item.type === 'separator') {
               return (
                 <li key={i} className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {item.label}
@@ -69,7 +33,7 @@ export function DesktopSidebar({
               );
             }
 
-            const navItem = item as { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
+            const navItem = item;
             const isActive =
               navItem.href === '/dashboard'
                 ? pathname === '/dashboard'

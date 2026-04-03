@@ -2,23 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Home,
-  Package,
-  ScanBarcode,
-  FileText,
-  Menu,
-} from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import type { FeatureFlags } from '@/types/database';
-
-const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Home', icon: Home },
-  { href: '/dashboard/products', label: 'Prodotti', icon: Package },
-  { href: '/dashboard/scan', label: 'Scan', icon: ScanBarcode, feature: 'barcode_scan' as const },
-  { href: '/dashboard/documents', label: 'Documenti', icon: FileText, feature: 'document_import' as const },
-  { href: '/dashboard/more', label: 'Altro', icon: Menu },
-] as const;
+import { getVisibleMobileNavItems } from '@/lib/navigation/dashboard-navigation';
 
 export function MobileNav({
   featureFlags,
@@ -26,7 +12,7 @@ export function MobileNav({
   featureFlags: FeatureFlags;
 }) {
   const pathname = usePathname();
-  const visibleItems = NAV_ITEMS.filter((item) => !('feature' in item) || !item.feature || featureFlags[item.feature]);
+  const visibleItems = getVisibleMobileNavItems(featureFlags);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white pb-safe md:hidden">

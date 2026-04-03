@@ -1,33 +1,15 @@
 import Link from 'next/link';
-import {
-  ScanBarcode,
-  Plus,
-  Mic,
-  FileUp,
-  Search,
-  Package,
-  Warehouse,
-  FileText,
-} from 'lucide-react';
 import { getCurrentOrganizationFeatureFlags } from '@/lib/auth/feature-flags';
 import { Card } from '@/components/ui/card';
+import {
+  getVisibleDashboardQuickActions,
+  getVisibleDashboardSections,
+} from '@/lib/navigation/dashboard-navigation';
 
 export default async function DashboardHome() {
   const featureFlags = await getCurrentOrganizationFeatureFlags();
-
-  const quickActions = [
-    featureFlags.barcode_scan ? { href: '/dashboard/scan', label: 'Scansiona', icon: ScanBarcode, color: 'bg-blue-500' } : null,
-    { href: '/dashboard/quick-add', label: 'Quick Add', icon: Plus, color: 'bg-green-500' },
-    featureFlags.voice_input ? { href: '/dashboard/voice', label: 'Voce', icon: Mic, color: 'bg-purple-500' } : null,
-    featureFlags.document_import ? { href: '/dashboard/documents/upload', label: 'Carica Doc', icon: FileUp, color: 'bg-orange-500' } : null,
-  ].filter(Boolean) as Array<{ href: string; label: string; icon: typeof ScanBarcode; color: string }>;
-
-  const sections = [
-    { href: '/dashboard/products', label: 'Prodotti', icon: Package, desc: 'Gestisci catalogo' },
-    { href: '/dashboard/inventory', label: 'Magazzino', icon: Warehouse, desc: 'Scorte e movimenti' },
-    featureFlags.document_import ? { href: '/dashboard/documents', label: 'Documenti', icon: FileText, desc: 'DDT e fatture' } : null,
-    { href: '/dashboard/products?search=true', label: 'Cerca', icon: Search, desc: 'Cerca articolo' },
-  ].filter(Boolean) as Array<{ href: string; label: string; icon: typeof Package; desc: string }>;
+  const quickActions = getVisibleDashboardQuickActions(featureFlags);
+  const sections = getVisibleDashboardSections(featureFlags);
 
   return (
     <div className="space-y-6 p-4">

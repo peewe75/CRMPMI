@@ -1,0 +1,14 @@
+FATTURA FORNITORE
+BRUNELLA ACCESSORI S.R.L.
+P. IVA IT12345678901
+Numero fattura FT-2026-0417
+Data 03/04/2026
+Valuta EUR
+Codice Descrizione Taglia Colore Qta Prezzo Totale
+SNK-BIA-42 Sneaker pelle bianca 42 Bianco 2 45,00 90,00
+BOR-NER-UN Borsa tracolla pelle martellata UN Nero 1 98,00 98,00
+CIN-CUO-95 Cintura cuoio fibbia oro 95 Cuoio 3 28,00 84,00
+SCI-BEI-UN Sciarpa cashmere light UN Beige 2 55,00 110,00
+Imponibile 382,00 EUR
+IVA 22% 84,04 EUR
+Totale fattura 466,04 EUR
