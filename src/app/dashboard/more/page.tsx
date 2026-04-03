@@ -1,19 +1,22 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import { getCurrentOrganizationFeatureFlags } from '@/lib/auth/feature-flags';
 import { Card } from '@/components/ui/card';
 
-const LINKS = [
-  { href: '/dashboard/quick-add', label: 'Quick add' },
-  { href: '/dashboard/voice', label: 'Input vocale' },
-  { href: '/dashboard/movements', label: 'Movimenti' },
-  { href: '/dashboard/variants', label: 'Varianti' },
-  { href: '/dashboard/users', label: 'Utenti e ruoli' },
-  { href: '/dashboard/settings', label: 'Impostazioni' },
-];
+export default async function MorePage() {
+  const featureFlags = await getCurrentOrganizationFeatureFlags();
 
-export default function MorePage() {
+  const links = [
+    { href: '/dashboard/quick-add', label: 'Quick add' },
+    featureFlags.voice_input ? { href: '/dashboard/voice', label: 'Input vocale' } : null,
+    { href: '/dashboard/movements', label: 'Movimenti' },
+    { href: '/dashboard/variants', label: 'Varianti' },
+    { href: '/dashboard/users', label: 'Utenti e ruoli' },
+    { href: '/dashboard/settings', label: 'Impostazioni' },
+  ].filter(Boolean) as Array<{ href: string; label: string }>;
+
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4 p-4">
       <div>
         <h1 className="text-xl font-bold">Altro</h1>
         <p className="text-sm text-muted-foreground">
@@ -22,7 +25,7 @@ export default function MorePage() {
       </div>
 
       <div className="space-y-2">
-        {LINKS.map((item) => (
+        {links.map((item) => (
           <Link key={item.href} href={item.href}>
             <Card className="flex items-center justify-between transition hover:shadow-sm">
               <span className="text-sm font-medium">{item.label}</span>

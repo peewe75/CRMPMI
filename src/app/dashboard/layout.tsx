@@ -3,6 +3,7 @@ import { DesktopSidebar } from '@/components/layout/desktop-sidebar';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { OrganizationOnboarding } from '@/components/layout/organization-onboarding';
 import { TopBar } from '@/components/layout/top-bar';
+import { getCurrentOrganizationFeatureFlags } from '@/lib/auth/feature-flags';
 
 export default async function DashboardLayout({
   children,
@@ -15,9 +16,11 @@ export default async function DashboardLayout({
     return <OrganizationOnboarding />;
   }
 
+  const featureFlags = await getCurrentOrganizationFeatureFlags();
+
   return (
     <div className="flex h-screen overflow-hidden">
-      <DesktopSidebar />
+      <DesktopSidebar featureFlags={featureFlags} />
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar />
@@ -26,7 +29,7 @@ export default async function DashboardLayout({
           {children}
         </main>
 
-        <MobileNav />
+        <MobileNav featureFlags={featureFlags} />
       </div>
     </div>
   );
