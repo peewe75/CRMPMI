@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { getProduct } from '@/modules/products/application/products-service';
+import { getVariantStockByStores, listMovements, listStores } from '@/modules/inventory/application/inventory-service';
+import { MovementQuickForm } from '@/components/inventory/movement-quick-form';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,8 +25,17 @@ export default async function VariantDetailPage({
     notFound();
   }
 
+  const [stockLevels, recentMovements, stores] = await Promise.all([
+    getVariantStockByStores(variantId),
+    listMovements({ variant_id: variantId, limit: 10 }),
+    listStores(),
+  ]);
+
+  const defaultStoreId = stores.find((store) => store.is_default)?.id ?? stores[0]?.id;
+  const totalStock = stockLevels.reduce((sum, level) => sum + Number(level.quantity), 0);
+
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4 p-4">
       <div className="flex items-center gap-2">
         <Button asChild variant="ghost" size="icon">
           <Link href={`/dashboard/products/${id}`}>
@@ -67,11 +78,91 @@ export default async function VariantDetailPage({
           </div>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-2">
           <Badge variant={variant.active ? 'success' : 'outline'}>
             {variant.active ? 'Attiva' : 'Inattiva'}
           </Badge>
+          <Badge variant={totalStock > 0 ? 'success' : 'outline'}>
+            Stock totale {totalStock}
+          </Badge>
         </div>
+      </Card>
+
+      <Card>
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold">Movimento rapido</h2>
+            <p className="text-sm text-muted-foreground">
+              Registra carico, scarico o rettifica direttamente dalla variante.
+            </p>
+          </div>
+          <MovementQuickForm variantId={variant.id} defaultStoreId={defaultStoreId} />
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Stock per negozio</h2>
+          <Badge variant="outline">{stockLevels.length}</Badge>
+        </div>
+
+        {stockLevels.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">Nessuna giacenza disponibile per questa variante.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {stockLevels.map((level) => {
+              const store = stores.find((item) => item.id === level.store_id);
+
+              return (
+                <li key={`${level.store_id}-${level.variant_id}`} className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div>
+                    <p className="text-sm font-medium">{store?.name ?? 'Negozio'}</p>
+                    <p className="text-xs text-muted-foreground">{store?.address ?? 'Nessun indirizzo'}</p>
+                  </div>
+                  <Badge variant={Number(level.quantity) > 0 ? 'success' : 'outline'}>{level.quantity}</Badge>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Ultimi movimenti</h2>
+          <Badge variant="outline">{recentMovements.movements.length}</Badge>
+        </div>
+
+        {recentMovements.movements.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">Ancora nessun movimento per questa variante.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {recentMovements.movements.map((movement) => (
+              <li key={movement.id} className="rounded-lg border border-border p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">{movement.movement_type}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(movement.created_at).toLocaleDateString('it-IT', {
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                      {movement.notes ? ` - ${movement.notes}` : ''}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={movement.movement_type === 'outbound' ? 'destructive' : movement.movement_type === 'adjustment' ? 'warning' : 'success'}
+                  >
+                    {movement.movement_type === 'outbound' ? '-' : '+'}
+                    {movement.quantity}
+                  </Badge>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </div>
   );

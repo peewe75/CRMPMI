@@ -5,6 +5,33 @@ import { writeAuditLog } from '@/lib/supabase/audit';
 import { requireTenantContext } from '@/lib/auth/tenant';
 import type { InventoryMovement, StockLevel, Store } from '@/types/database';
 
+export interface StockLevelWithVariant extends StockLevel {
+  product_variants: {
+    id: string;
+    size: string;
+    color: string;
+    barcode: string | null;
+    sku_supplier: string | null;
+    products: {
+      id: string;
+      brand: string;
+      model_name: string;
+      category: string;
+    };
+  };
+}
+
+export interface MovementWithVariant extends InventoryMovement {
+  product_variants: {
+    size: string;
+    color: string;
+    products: {
+      brand: string;
+      model_name: string;
+    };
+  };
+}
+
 // ---------- Stores ----------
 
 export async function listStores() {
@@ -155,7 +182,7 @@ export async function listMovements(filters?: {
   const { data, error, count } = await query;
   if (error) throw new Error(error.message);
 
-  return { movements: data as InventoryMovement[], total: count ?? 0 };
+  return { movements: data as MovementWithVariant[], total: count ?? 0 };
 }
 
 // ---------- Stock Levels ----------
@@ -179,5 +206,10 @@ export async function getStockLevels(filters?: {
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  return data as (StockLevel & { product_variants: unknown })[];
+  return data as StockLevelWithVariant[];
+}
+
+export async function getVariantStockByStores(variantId: string) {
+  const levels = await getStockLevels({ variant_id: variantId });
+  return levels;
 }

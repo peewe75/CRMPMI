@@ -6,6 +6,14 @@ import { requireTenantContext } from '@/lib/auth/tenant';
 import { assertCanCreateProduct } from '@/modules/billing/application/billing-service';
 import type { Product, ProductVariant } from '@/types/database';
 
+export interface VariantListItem extends ProductVariant {
+  products: Pick<Product, 'id' | 'brand' | 'model_name' | 'category'>;
+  stock_levels: Array<{
+    quantity: number;
+    store_id: string;
+  }>;
+}
+
 // ---------- Products ----------
 
 export async function listProducts(filters?: {
@@ -154,6 +162,46 @@ export async function searchProducts(query: string) {
 }
 
 // ---------- Variants ----------
+
+export async function listVariants(filters?: {
+  search?: string;
+  active?: boolean;
+  limit?: number;
+  offset?: number;
+}) {
+  const { orgId } = await requireTenantContext();
+  const db = createServiceClient();
+
+  let query = db
+    .from('product_variants')
+    .select('*, products:product_id(id, brand, model_name, category), stock_levels(quantity, store_id)', {
+      count: 'exact',
+    })
+    .eq('org_id', orgId)
+    .order('updated_at', { ascending: false })
+    .range(filters?.offset ?? 0, (filters?.offset ?? 0) + (filters?.limit ?? 50) - 1);
+
+  if (filters?.active != null) {
+    query = query.eq('active', filters.active);
+  }
+
+  if (filters?.search) {
+    query = query.or(
+      [
+        `size.ilike.%${filters.search}%`,
+        `color.ilike.%${filters.search}%`,
+        `barcode.ilike.%${filters.search}%`,
+        `sku_supplier.ilike.%${filters.search}%`,
+        `sku_internal.ilike.%${filters.search}%`,
+      ].join(',')
+    );
+  }
+
+  const { data, error, count } = await query;
+  if (error) throw new Error(error.message);
+
+  return { variants: (data ?? []) as VariantListItem[], total: count ?? 0 };
+}
 
 export async function createVariant(input: {
   product_id: string;

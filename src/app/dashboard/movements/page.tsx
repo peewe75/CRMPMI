@@ -1,5 +1,7 @@
+import Link from 'next/link';
 import { listMovements } from '@/modules/inventory/application/inventory-service';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 const TYPE_LABELS: Record<string, string> = {
   inbound: 'Entrata',
@@ -15,39 +17,69 @@ const TYPE_COLORS: Record<string, 'success' | 'destructive' | 'warning' | 'defau
   transfer: 'default',
 };
 
-export default async function MovementsPage() {
-  const { movements } = await listMovements({ limit: 50 });
+export default async function MovementsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string }>;
+}) {
+  const params = await searchParams;
+  const selectedType = params.type && params.type in TYPE_LABELS ? params.type : undefined;
+  const { movements } = await listMovements({
+    limit: 50,
+    movement_type: selectedType,
+  });
 
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-xl font-bold">Movimenti</h1>
+    <div className="space-y-4 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold">Movimenti</h1>
+          <p className="text-sm text-muted-foreground">Storico carichi, scarichi e rettifiche.</p>
+        </div>
+        <div className="flex gap-2 overflow-x-auto">
+          <Button asChild size="sm" variant={!selectedType ? 'default' : 'outline'}>
+            <Link href="/dashboard/movements">Tutti</Link>
+          </Button>
+          {Object.entries(TYPE_LABELS).map(([type, label]) => (
+            <Button key={type} asChild size="sm" variant={selectedType === type ? 'default' : 'outline'}>
+              <Link href={`/dashboard/movements?type=${type}`}>{label}</Link>
+            </Button>
+          ))}
+        </div>
+      </div>
 
       {movements.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Nessun movimento registrato.</p>
+        <p className="text-sm text-muted-foreground">Nessun movimento registrato.</p>
       ) : (
         <ul className="space-y-2">
-          {movements.map((m) => {
-            const variant = (m as unknown as { product_variants: { size: string; color: string; products: { brand: string; model_name: string } } }).product_variants;
+          {movements.map((movement) => {
+            const variant = movement.product_variants;
             return (
-              <li key={m.id} className="flex items-center justify-between rounded-lg border border-border bg-white p-3">
+              <li key={movement.id} className="flex items-center justify-between rounded-lg border border-border bg-white p-3">
                 <div>
                   <p className="text-sm font-medium">
                     {variant?.products?.brand} {variant?.products?.model_name}
-                    <span className="text-muted-foreground ml-1">
-                      Tg.{variant?.size} {variant?.color}
+                    <span className="ml-1 text-muted-foreground">
+                      Tg. {variant?.size} {variant?.color}
                     </span>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(m.created_at).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                    {m.notes && ` · ${m.notes}`}
+                    {new Date(movement.created_at).toLocaleDateString('it-IT', {
+                      day: '2-digit',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                    {movement.notes ? ` - ${movement.notes}` : ''}
                   </p>
                 </div>
-                <div className="text-right flex items-center gap-2">
+                <div className="flex items-center gap-2 text-right">
                   <span className="text-sm font-semibold">
-                    {m.movement_type === 'outbound' ? '-' : '+'}{m.quantity}
+                    {movement.movement_type === 'outbound' ? '-' : '+'}
+                    {movement.quantity}
                   </span>
-                  <Badge variant={TYPE_COLORS[m.movement_type]}>
-                    {TYPE_LABELS[m.movement_type]}
+                  <Badge variant={TYPE_COLORS[movement.movement_type]}>
+                    {TYPE_LABELS[movement.movement_type]}
                   </Badge>
                 </div>
               </li>
