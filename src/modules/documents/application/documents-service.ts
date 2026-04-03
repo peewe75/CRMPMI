@@ -226,3 +226,79 @@ export async function getDocumentSignedUrl(filePath: string) {
   if (error) throw new Error('Could not generate preview URL');
   return data.signedUrl;
 }
+
+export async function deleteDocumentRecord(documentId: string) {
+  const { orgId, userId } = await requireTenantContext();
+  const db = createServiceClient();
+
+  const { data: document, error: documentError } = await db
+    .from('uploaded_documents')
+    .select('*')
+    .eq('id', documentId)
+    .eq('org_id', orgId)
+    .single();
+
+  if (documentError || !document) {
+    throw new Error('Document not found');
+  }
+
+  const { error: storageError } = await db.storage
+    .from('documents')
+    .remove([document.file_path]);
+
+  if (storageError) {
+    throw new Error(`Errore nella rimozione file: ${storageError.message}`);
+  }
+
+  const { error: movementError } = await db
+    .from('inventory_movements')
+    .update({
+      source_document_id: null,
+      source_document_type: null,
+      notes: document.document_number
+        ? `Movimento originato da documento eliminato (${document.document_number})`
+        : 'Movimento originato da documento eliminato',
+    })
+    .eq('org_id', orgId)
+    .eq('source_document_id', documentId);
+
+  if (movementError) {
+    throw new Error(movementError.message);
+  }
+
+  const { error: sessionError } = await db
+    .from('document_import_sessions')
+    .delete()
+    .eq('org_id', orgId)
+    .eq('uploaded_document_id', documentId);
+
+  if (sessionError) {
+    throw new Error(sessionError.message);
+  }
+
+  const { error: deleteError } = await db
+    .from('uploaded_documents')
+    .delete()
+    .eq('id', documentId)
+    .eq('org_id', orgId);
+
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
+
+  await writeAuditLog({
+    orgId,
+    actorUserId: userId,
+    entityType: 'document',
+    entityId: documentId,
+    action: 'delete',
+    payload: {
+      file_name: document.file_name,
+      file_path: document.file_path,
+      status: document.status,
+      imported_cleanup: true,
+    },
+  });
+
+  return document as UploadedDocument;
+}

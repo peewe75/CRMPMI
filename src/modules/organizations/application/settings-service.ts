@@ -11,8 +11,9 @@ import { createStore, listStores } from '@/modules/inventory/application/invento
 import {
   getOrCreateTenantBilling,
   getTenantUsageSnapshot,
+  updateTenantBillingPlaceholder,
 } from '@/modules/billing/application/billing-service';
-import type { FeatureFlags, Store, TenantBilling } from '@/types/database';
+import { PLAN_LIMITS, type FeatureFlags, type Store, type TenantBilling } from '@/types/database';
 
 export interface TenantSettingsOverview {
   organization: {
@@ -140,4 +141,40 @@ export async function createStoreFromSettings(input: {
   }
 
   return createStore(input);
+}
+
+export async function updateTenantBillingSettings(input: {
+  plan: TenantBilling['plan'];
+  status: TenantBilling['status'];
+  max_products?: number;
+  max_documents_month?: number;
+  current_period_end?: string | null;
+}) {
+  const ctx = await requireRole('org:admin');
+  const limits = PLAN_LIMITS[input.plan];
+
+  const billing = await updateTenantBillingPlaceholder(ctx.orgId, {
+    plan: input.plan,
+    status: input.status,
+    max_products: input.max_products ?? limits.max_products,
+    max_documents_month: input.max_documents_month ?? limits.max_documents_month,
+    current_period_end: input.current_period_end ?? null,
+  });
+
+  await writeAuditLog({
+    orgId: ctx.orgId,
+    actorUserId: ctx.userId,
+    entityType: 'tenant_billing',
+    entityId: billing.id,
+    action: 'update',
+    payload: {
+      plan: billing.plan,
+      status: billing.status,
+      max_products: billing.max_products,
+      max_documents_month: billing.max_documents_month,
+      current_period_end: billing.current_period_end,
+    },
+  });
+
+  return billing;
 }

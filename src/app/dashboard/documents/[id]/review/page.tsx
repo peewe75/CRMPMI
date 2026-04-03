@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getDocumentWithLines } from '@/modules/documents/application/documents-service';
+import { DocumentDeleteAction } from '@/components/documents/document-delete-action';
 import { DocumentImportActions } from '@/components/documents/document-import-actions';
 import { DocumentReviewActions } from '@/components/documents/document-review-actions';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { getDocumentWithLines } from '@/modules/documents/application/documents-service';
 
 export default async function DocumentReviewPage({
   params,
@@ -40,6 +41,13 @@ export default async function DocumentReviewPage({
             documentId={document.id}
             status={document.status}
             lineCount={lines.length}
+          />
+          <DocumentDeleteAction
+            documentId={document.id}
+            documentStatus={document.status}
+            redirectTo="/dashboard/documents"
+            buttonLabel="Elimina documento"
+            variant="destructive"
           />
           <Button asChild variant="outline" size="sm">
             <Link href="/dashboard/documents">Torna ai documenti</Link>

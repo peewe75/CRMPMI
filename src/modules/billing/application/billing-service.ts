@@ -1,7 +1,7 @@
 'use server';
 
 import { createServiceClient } from '@/lib/supabase/server';
-import type { TenantBilling } from '@/types/database';
+import { PLAN_LIMITS, type TenantBilling } from '@/types/database';
 
 interface TenantUsageSnapshot {
   productsCount: number;
@@ -114,4 +114,39 @@ export async function assertCanUploadDocument(orgId: string) {
       `Forbidden: limite documenti mensili raggiunto (${billing.max_documents_month} documenti al mese)`
     );
   }
+}
+
+export async function updateTenantBillingPlaceholder(
+  orgId: string,
+  input: {
+    plan: TenantBilling['plan'];
+    status: TenantBilling['status'];
+    max_products?: number;
+    max_documents_month?: number;
+    current_period_end?: string | null;
+  }
+) {
+  const db = createServiceClient();
+  const baseLimits = PLAN_LIMITS[input.plan];
+
+  const payload = {
+    plan: input.plan,
+    status: input.status,
+    max_products: input.max_products ?? baseLimits.max_products,
+    max_documents_month: input.max_documents_month ?? baseLimits.max_documents_month,
+    current_period_end: input.current_period_end ?? null,
+  };
+
+  const { data, error } = await db
+    .from('tenant_billing')
+    .update(payload)
+    .eq('org_id', orgId)
+    .select('*')
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as TenantBilling;
 }

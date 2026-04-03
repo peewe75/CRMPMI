@@ -1,9 +1,10 @@
 import Link from 'next/link';
-import { FileText, Upload, ArrowRight } from 'lucide-react';
-import { listDocuments } from '@/modules/documents/application/documents-service';
-import { Button } from '@/components/ui/button';
+import { ArrowRight, FileText, Upload } from 'lucide-react';
+import { DocumentDeleteAction } from '@/components/documents/document-delete-action';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { listDocuments } from '@/modules/documents/application/documents-service';
 
 const STATUS_LABELS: Record<string, string> = {
   uploaded: 'Caricato',
@@ -19,7 +20,7 @@ export default async function DocumentsPage() {
   const { documents } = await listDocuments({ limit: 50 });
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4 p-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">Documenti</h1>
@@ -47,24 +48,37 @@ export default async function DocumentsPage() {
         <ul className="space-y-2">
           {documents.map((document) => (
             <li key={document.id}>
-              <Link
-                href={`/dashboard/documents/${document.id}/review`}
-                className="flex items-center justify-between rounded-lg border border-border bg-white p-3 transition hover:shadow-sm"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{document.file_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {document.document_type.toUpperCase()} ·{' '}
-                    {new Date(document.created_at).toLocaleDateString('it-IT')}
-                  </p>
+              <div className="rounded-lg border border-border bg-white p-3 transition hover:shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <Link
+                    href={`/dashboard/documents/${document.id}/review`}
+                    className="min-w-0 flex-1"
+                  >
+                    <p className="truncate text-sm font-semibold">{document.file_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {document.document_type.toUpperCase()} ·{' '}
+                      {new Date(document.created_at).toLocaleDateString('it-IT')}
+                    </p>
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={document.status === 'failed' ? 'destructive' : 'outline'}>
+                      {STATUS_LABELS[document.status] ?? document.status}
+                    </Badge>
+                    <Link href={`/dashboard/documents/${document.id}/review`}>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </Link>
+                  </div>
                 </div>
-                <div className="ml-3 flex items-center gap-2">
-                  <Badge variant={document.status === 'failed' ? 'destructive' : 'outline'}>
-                    {STATUS_LABELS[document.status] ?? document.status}
-                  </Badge>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+
+                <div className="mt-3 flex justify-end">
+                  <DocumentDeleteAction
+                    documentId={document.id}
+                    documentStatus={document.status}
+                    buttonLabel="Elimina"
+                    variant="outline"
+                  />
                 </div>
-              </Link>
+              </div>
             </li>
           ))}
         </ul>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { FileUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -81,7 +82,19 @@ export default function DocumentUploadPage() {
             />
           </div>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {error ? (
+            <div className="space-y-2">
+              <p className="text-sm text-destructive">{error}</p>
+              {error.toLowerCase().includes('limite documenti') ? (
+                <Link
+                  href="/dashboard/settings"
+                  className="inline-flex text-sm font-medium text-accent underline underline-offset-2"
+                >
+                  Vai in Impostazioni e aumenta il limite nel billing placeholder
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
 
           <Button type="submit" disabled={isSubmitting} className="w-full">
             <FileUp className="h-4 w-4" />

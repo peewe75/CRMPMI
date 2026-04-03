@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import type { FeatureFlags } from '@/types/database';
+import { PLAN_LIMITS, type FeatureFlags, type TenantBilling } from '@/types/database';
 import type { TenantSettingsOverview } from '@/modules/organizations/application/settings-service';
 
 const FEATURE_LABELS: Record<keyof FeatureFlags, { title: string; description: string }> = {
@@ -40,6 +40,12 @@ export function SettingsManagement({
     phone: '',
   });
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags>(overview.featureFlags);
+  const [billingForm, setBillingForm] = useState({
+    plan: overview.billing.plan,
+    status: overview.billing.status,
+    max_products: String(overview.billing.max_products),
+    max_documents_month: String(overview.billing.max_documents_month),
+  });
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [isRefreshing, startTransition] = useTransition();
@@ -147,6 +153,44 @@ export function SettingsManagement({
     }
   }
 
+  async function handleBillingSave(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFeedback(null);
+    setBusyKey('billing');
+
+    try {
+      const response = await fetch('/api/settings/billing', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...billingForm,
+          max_products: Number(billingForm.max_products),
+          max_documents_month: Number(billingForm.max_documents_month),
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error ?? 'Aggiornamento billing non riuscito');
+      }
+
+      setBillingForm({
+        plan: payload.billing.plan,
+        status: payload.billing.status,
+        max_products: String(payload.billing.max_products),
+        max_documents_month: String(payload.billing.max_documents_month),
+      });
+      setSuccess('Billing placeholder aggiornato.');
+      refreshPage();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Aggiornamento billing non riuscito');
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
   const canAddExtraStore = overview.canManage && (featureFlags.multi_store || overview.stores.length === 0);
   const currentPeriodEndLabel = overview.billing.current_period_end
     ? new Date(overview.billing.current_period_end).toLocaleDateString('it-IT')
@@ -236,6 +280,92 @@ export function SettingsManagement({
               </p>
             </div>
           </div>
+
+          {overview.canManage ? (
+            <form onSubmit={handleBillingSave} className="space-y-3 border-t border-border pt-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Piano placeholder</label>
+                  <select
+                    value={billingForm.plan}
+                    onChange={(event) => {
+                      const nextPlan = event.target.value as TenantBilling['plan'];
+                      const limits = PLAN_LIMITS[nextPlan];
+                      setBillingForm((current) => ({
+                        ...current,
+                        plan: nextPlan,
+                        max_products: String(limits.max_products),
+                        max_documents_month: String(limits.max_documents_month),
+                      }));
+                    }}
+                    className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="free">Free</option>
+                    <option value="starter">Starter</option>
+                    <option value="pro">Pro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Stato</label>
+                  <select
+                    value={billingForm.status}
+                    onChange={(event) =>
+                      setBillingForm((current) => ({
+                        ...current,
+                        status: event.target.value as TenantBilling['status'],
+                      }))
+                    }
+                    className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="trialing">Trialing</option>
+                    <option value="active">Active</option>
+                    <option value="past_due">Past due</option>
+                    <option value="canceled">Canceled</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Max prodotti</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={billingForm.max_products}
+                    onChange={(event) =>
+                      setBillingForm((current) => ({
+                        ...current,
+                        max_products: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Max documenti / mese</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={billingForm.max_documents_month}
+                    onChange={(event) =>
+                      setBillingForm((current) => ({
+                        ...current,
+                        max_documents_month: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                Questo pannello serve per i test finché non colleghiamo Stripe o webhook reali.
+              </p>
+
+              <Button type="submit" disabled={busyKey === 'billing' || isRefreshing}>
+                {busyKey === 'billing' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Salva billing placeholder
+              </Button>
+            </form>
+          ) : null}
         </Card>
       </div>
 
