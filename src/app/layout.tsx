@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import { Geist } from 'next/font/google';
+import { hasClerkFrontendConfig } from '@/lib/auth/clerk-config';
 import './globals.css';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist' });
@@ -29,13 +30,21 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const appShell = (
+    <html lang="it" className={`${geist.variable} h-full`}>
+      <body className="min-h-full bg-gray-50 font-sans antialiased">
+        {children}
+      </body>
+    </html>
+  );
+
+  if (!hasClerkFrontendConfig()) {
+    return appShell;
+  }
+
   return (
     <ClerkProvider afterSignOutUrl="/">
-      <html lang="it" className={`${geist.variable} h-full`}>
-        <body className="min-h-full bg-gray-50 font-sans antialiased">
-          {children}
-        </body>
-      </html>
+      {appShell}
     </ClerkProvider>
   );
 }
