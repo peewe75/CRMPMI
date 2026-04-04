@@ -28,6 +28,22 @@ const COLOR_SYNONYMS: Record<string, string> = {
   grigie: 'Grigio',
 };
 
+const NUMBER_WORDS: Record<string, number> = {
+  zero: 0,
+  uno: 1,
+  una: 1,
+  un: 1,
+  due: 2,
+  tre: 3,
+  quattro: 4,
+  cinque: 5,
+  sei: 6,
+  sette: 7,
+  otto: 8,
+  nove: 9,
+  dieci: 10,
+};
+
 const FILLER_WORDS = new Set([
   'quante', 'quanto', 'quanti', 'quanta', 'ho', 'sono', 'rimaste', 'rimasti', 'rimasta', 'rimasto',
   'c', 'ce', 'dei', 'delle', 'della', 'del', 'di', 'la', 'le', 'il', 'lo', 'gli', 'un', 'una', 'uno',
@@ -98,4 +114,13 @@ export function compactWhitespace(text: string) {
 
 export function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+export function parseVoiceQuantityToken(token: string) {
+  if (/^\d+$/.test(token)) return Number(token);
+  return NUMBER_WORDS[token] ?? null;
+}
+
+export function voiceQuantityPattern() {
+  return String.raw`(\d+|zero|uno|una|un|due|tre|quattro|cinque|sei|sette|otto|nove|dieci)`;
 }

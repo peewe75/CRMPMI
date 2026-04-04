@@ -4,13 +4,18 @@ import {
   extractColor,
   extractSize,
   normalizeVoiceText,
+  parseVoiceQuantityToken,
   removeColorTokens,
   removeSizeTokens,
   splitBrandAndModel,
   stripIntentPrefix,
+  voiceQuantityPattern,
 } from '@/modules/voice/application/voice-normalizers';
 
-const ITEM_PATTERN = /(\d+)\s+(?:numero|num|n|taglia|tg)\s*(\d{2,3}(?:[.,]\d)?)/g;
+const ITEM_PATTERN = new RegExp(
+  `${voiceQuantityPattern()}\\s+(?:numero|num|n|taglia|tg)\\s*(\\d{2,3}(?:[.,]\\d)?)`,
+  'g'
+);
 
 export function parseVoiceTranscript(text: string): VoiceParseResult {
   const normalizedText = normalizeVoiceText(text);
@@ -60,15 +65,21 @@ function parseVoiceItems(subjectText: string, intent: VoiceIntent, warnings: str
         lineIndex: index,
         baseText,
         rawDescription: `${baseText} numero ${match[2]}`.trim(),
-        quantity: Number(match[1]),
+        quantity: parseVoiceQuantityToken(match[1]) ?? 1,
         size: match[2].replace(',', '.'),
         intent,
       })
     );
   }
 
-  const quantityMatch = subjectText.match(/^(\d+)\s+/);
-  const quantity = quantityMatch ? Number(quantityMatch[1]) : intent === 'stock_lookup' ? null : 1;
+  const quantityMatch = subjectText.match(
+    new RegExp(`^${voiceQuantityPattern()}\\s+`)
+  );
+  const quantity = quantityMatch
+    ? parseVoiceQuantityToken(quantityMatch[1])
+    : intent === 'stock_lookup'
+      ? null
+      : 1;
   const withoutLeadingQuantity = quantityMatch ? subjectText.slice(quantityMatch[0].length) : subjectText;
 
   if (!withoutLeadingQuantity.trim()) {
@@ -80,7 +91,7 @@ function parseVoiceItems(subjectText: string, intent: VoiceIntent, warnings: str
       lineIndex: 0,
       baseText: withoutLeadingQuantity,
       rawDescription: withoutLeadingQuantity,
-      quantity,
+      quantity: quantity ?? (intent === 'stock_lookup' ? null : 1),
       size: extractSize(withoutLeadingQuantity),
       intent,
     }),
@@ -122,7 +133,9 @@ function buildItem(params: {
   const color = extractColor(params.baseText);
   const textWithoutColor = removeColorTokens(params.baseText);
   const textWithoutSize = removeSizeTokens(textWithoutColor);
-  const descriptorText = compactWhitespace(textWithoutSize.replace(/^\d+\s+/, ''));
+  const descriptorText = compactWhitespace(
+    textWithoutSize.replace(new RegExp(`^${voiceQuantityPattern()}\\s+`), '')
+  );
   const { brand, model_name } = splitBrandAndModel(descriptorText);
 
   const confidence =

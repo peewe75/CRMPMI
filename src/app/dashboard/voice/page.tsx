@@ -162,6 +162,14 @@ export default function VoicePage() {
                 <p className="text-muted-foreground">
                   Tg. {item.size ?? '-'} - Colore {item.color ?? '-'} - Qta {item.quantity_delta ?? item.quantity ?? '-'}
                 </p>
+                <p className="mt-1 text-xs">
+                  Match catalogo:{' '}
+                  {item.match_status === 'matched'
+                    ? `ok${item.matched_label ? ` - ${item.matched_label}` : ''}`
+                    : item.match_status === 'weak_match'
+                      ? `da verificare${item.matched_label ? ` - ${item.matched_label}` : ''}`
+                      : 'nessuna corrispondenza credibile'}
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Confidenza item: {(item.confidence * 100).toFixed(0)}%
                 </p>

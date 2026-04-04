@@ -5,13 +5,15 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { createProposal } from '@/modules/proposals/application/proposals-service';
 import type { CreateProposalInput } from '@/modules/proposals/domain/proposal-types';
 import { parseVoiceTranscript } from '@/modules/voice/application/voice-intent-parser';
-import type { VoiceLookupMatch, VoiceLookupResponse, VoiceParseResult } from '@/types/documents';
+import type { VoiceCommandItem, VoiceLookupMatch, VoiceLookupResponse, VoiceParseResult } from '@/types/documents';
 
 export async function interpretVoiceCommand(text: string): Promise<VoiceParseResult> {
   const parsed = parseVoiceTranscript(text);
 
   if (parsed.intent === 'stock_lookup' || parsed.intent === 'product_search') {
     parsed.lookup_result = await resolveVoiceLookup(parsed);
+  } else {
+    await enrichVoiceMutationItems(parsed);
   }
 
   return parsed;
@@ -56,16 +58,21 @@ export async function createVoiceProposalFromInterpretation(input: {
     items: parsed.command.items.map((item) => ({
       line_index: item.line_index,
       raw_description: item.raw_description,
+      matched_product_id: item.matched_product_id ?? null,
+      matched_variant_id: item.matched_variant_id ?? null,
       interpreted_action: proposalType,
       quantity: parsed.intent === 'inventory_adjustment' ? item.quantity_delta : item.quantity,
       size_raw: item.size,
       color_raw: item.color,
-      status: item.confidence >= 0.8 ? 'pending' : 'unmatched',
+      match_score: item.match_score ?? null,
+      status: item.match_status === 'matched' ? 'matched' : 'unmatched',
       confidence: item.confidence,
       payload: {
         brand: item.brand,
         model_name: item.model_name,
         quantity_delta: item.quantity_delta,
+        match_status: item.match_status ?? 'unmatched',
+        matched_label: item.matched_label ?? null,
       },
     })),
   };
@@ -143,6 +150,147 @@ async function resolveVoiceLookup(parsed: VoiceParseResult): Promise<VoiceLookup
     similar_matches: similarMatches,
     summary,
   };
+}
+
+async function enrichVoiceMutationItems(parsed: VoiceParseResult) {
+  const { orgId } = await requireTenantContext();
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from('product_variants')
+    .select('id, size, color, product_id, products:product_id(id, brand, model_name)')
+    .eq('org_id', orgId)
+    .eq('active', true)
+    .limit(200);
+
+  if (error) {
+    parsed.command.warnings.push('catalogo non interrogabile per il matching automatico');
+    parsed.needs_review = true;
+    parsed.confidence = Math.max(0, parsed.confidence - 0.2);
+    parsed.command.confidence = parsed.confidence;
+    return;
+  }
+
+  const candidates = (data ?? []).map((variant) => {
+    const product = Array.isArray(variant.products) ? variant.products[0] : variant.products;
+    return {
+      variant_id: variant.id,
+      product_id: product?.id ?? variant.product_id,
+      brand: product?.brand ?? '',
+      model_name: product?.model_name ?? '',
+      size: variant.size ?? '',
+      color: variant.color ?? '',
+    };
+  });
+
+  let requiresReview = parsed.needs_review;
+
+  parsed.command.items = parsed.command.items.map((item) => {
+    const enriched = resolveVoiceMutationMatch(item, candidates);
+
+    if (enriched.match_status === 'unmatched') {
+      parsed.command.warnings.push(`nessuna corrispondenza trovata per "${item.raw_description}"`);
+      requiresReview = true;
+    } else if (enriched.match_status === 'weak_match') {
+      parsed.command.warnings.push(`match da verificare per "${item.raw_description}"`);
+      requiresReview = true;
+    }
+
+    return enriched;
+  });
+
+  const averageConfidence = parsed.command.items.length
+    ? parsed.command.items.reduce((sum, item) => sum + item.confidence, 0) / parsed.command.items.length
+    : parsed.confidence;
+
+  parsed.confidence = Math.max(0, Math.min(1, averageConfidence - parsed.command.warnings.length * 0.05));
+  parsed.command.confidence = parsed.confidence;
+  parsed.needs_review = requiresReview || parsed.command.items.some((item) => item.match_status !== 'matched');
+}
+
+function resolveVoiceMutationMatch(
+  item: VoiceCommandItem,
+  candidates: Array<{
+    variant_id: string;
+    product_id: string;
+    brand: string;
+    model_name: string;
+    size: string;
+    color: string;
+  }>
+) {
+  const ranked = candidates
+    .map((candidate) => ({
+      candidate,
+      score: scoreMutationMatch(item, candidate),
+    }))
+    .filter((entry) => entry.score >= 0.35)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  const best = ranked[0];
+  if (!best) {
+    return {
+      ...item,
+      match_status: 'unmatched' as const,
+      matched_product_id: null,
+      matched_variant_id: null,
+      match_score: 0,
+      matched_label: null,
+      confidence: Math.min(item.confidence, 0.45),
+    };
+  }
+
+  const matchedLabel = compactCandidateLabel(best.candidate);
+  if (best.score >= 0.88) {
+    return {
+      ...item,
+      match_status: 'matched' as const,
+      matched_product_id: best.candidate.product_id,
+      matched_variant_id: best.candidate.variant_id,
+      match_score: best.score,
+      matched_label: matchedLabel,
+      confidence: Math.min(1, (item.confidence + best.score) / 2),
+    };
+  }
+
+  return {
+    ...item,
+    match_status: 'weak_match' as const,
+    matched_product_id: best.candidate.product_id,
+    matched_variant_id: best.candidate.variant_id,
+    match_score: best.score,
+    matched_label: matchedLabel,
+    confidence: Math.min(item.confidence, 0.69),
+  };
+}
+
+function scoreMutationMatch(
+  item: VoiceCommandItem,
+  candidate: { brand: string; model_name: string; size: string; color: string }
+) {
+  let score = 0;
+
+  if (compareText(item.brand, candidate.brand)) score += 0.35;
+  if (compareText(item.model_name, candidate.model_name)) score += 0.3;
+  if (item.size && item.size === candidate.size) score += 0.2;
+  if (item.color && compareText(item.color, candidate.color)) score += 0.15;
+
+  const queryText = [item.brand, item.model_name].filter(Boolean).join(' ').trim().toLowerCase();
+  const candidateText = `${candidate.brand} ${candidate.model_name}`.toLowerCase();
+  if (queryText && candidateText.includes(queryText)) score += 0.1;
+
+  return Math.min(1, score);
+}
+
+function compactCandidateLabel(candidate: {
+  brand: string;
+  model_name: string;
+  size: string;
+  color: string;
+}) {
+  return [candidate.brand, candidate.model_name, candidate.size ? `Tg. ${candidate.size}` : null, candidate.color]
+    .filter(Boolean)
+    .join(' ');
 }
 
 function scoreLookupMatch(

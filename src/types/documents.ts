@@ -100,6 +100,11 @@ export interface VoiceCommandItem {
   quantity_delta: number | null;
   raw_description: string;
   confidence: number;
+  match_status?: 'matched' | 'weak_match' | 'unmatched';
+  matched_product_id?: string | null;
+  matched_variant_id?: string | null;
+  match_score?: number | null;
+  matched_label?: string | null;
 }
 
 export interface VoiceLookupMatch {
