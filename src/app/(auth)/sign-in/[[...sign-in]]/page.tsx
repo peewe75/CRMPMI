@@ -1,7 +1,6 @@
-import { SignIn } from '@clerk/nextjs';
 import { hasClerkFrontendConfig } from '@/lib/auth/clerk-config';
 
-export default function SignInPage() {
+export default async function SignInPage() {
   if (!hasClerkFrontendConfig()) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
@@ -15,6 +14,8 @@ export default function SignInPage() {
       </div>
     );
   }
+
+  const { SignIn } = await import('@clerk/nextjs');
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">

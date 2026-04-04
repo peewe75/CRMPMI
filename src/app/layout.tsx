@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import { ClerkProvider } from '@clerk/nextjs';
 import { Geist } from 'next/font/google';
 import { hasClerkFrontendConfig } from '@/lib/auth/clerk-config';
 import './globals.css';
@@ -25,7 +24,7 @@ export const viewport: Viewport = {
   themeColor: '#0f172a',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -41,6 +40,8 @@ export default function RootLayout({
   if (!hasClerkFrontendConfig()) {
     return appShell;
   }
+
+  const { ClerkProvider } = await import('@clerk/nextjs');
 
   return (
     <ClerkProvider afterSignOutUrl="/">

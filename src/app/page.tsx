@@ -4,12 +4,14 @@ import {
   hasClerkFrontendConfig,
   hasClerkServerConfig,
 } from '@/lib/auth/clerk-config';
-import { getTenantContext } from '@/lib/auth/tenant';
 
 export default async function LandingPage() {
-  const tenantContext = hasClerkServerConfig()
-    ? await getTenantContext()
-    : null;
+  let tenantContext: { userId: string } | null = null;
+
+  if (hasClerkServerConfig()) {
+    const { getTenantContext } = await import('@/lib/auth/tenant');
+    tenantContext = await getTenantContext();
+  }
 
   if (tenantContext?.userId) {
     redirect('/dashboard');
