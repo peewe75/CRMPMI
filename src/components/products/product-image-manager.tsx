@@ -6,6 +6,7 @@ import { Camera, ImagePlus, Star, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { getVariantCommercialLabel, getVariantSizeLabel } from '@/modules/products/domain/variant-display';
 
 interface ProductImageView {
   id: string;
@@ -27,7 +28,7 @@ export function ProductImageManager({
   description = 'Carica foto da smartphone o desktop e scegli se legarle al prodotto o a una variante.',
 }: {
   productId: string;
-  variants: Array<{ id: string; size: string; color: string }>;
+  variants: Array<{ id: string; size: string | null; color: string; material?: string | null }>;
   initialImages: ProductImageView[];
   scopeVariantId?: string;
   title?: string;
@@ -174,15 +175,15 @@ export function ProductImageManager({
               >
                 <option value="">Prodotto principale</option>
                 {variants.map((variant) => (
-                  <option key={variant.id} value={variant.id}>
-                    Variante {variant.size} - {variant.color}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <option key={variant.id} value={variant.id}>
+                    {getVariantCommercialLabel(variant)} - {getVariantSizeLabel(variant)}
+                </option>
+              ))}
+            </select>
+          </label>
           ) : (
             <div className="flex items-center rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground">
-              Variante dedicata: {variants[0]?.size ?? '-'} - {variants[0]?.color ?? '-'}
+              Variante dedicata: {variants[0] ? `${getVariantCommercialLabel(variants[0])} - ${getVariantSizeLabel(variants[0])}` : '-'}
             </div>
           )}
 
@@ -264,7 +265,7 @@ function ImageSection({
   title: string;
   emptyText: string;
   images: ProductImageView[];
-  variants: Array<{ id: string; size: string; color: string }>;
+  variants: Array<{ id: string; size: string | null; color: string; material?: string | null }>;
   busyImageId: string | null;
   onDelete: (imageId: string) => Promise<void>;
   onSetPrimary: (imageId: string) => Promise<void>;
@@ -299,7 +300,13 @@ function ImageSection({
                 <div className="space-y-1">
                   <div className="flex flex-wrap gap-1">
                     {image.is_primary ? <Badge variant="success">Principale</Badge> : null}
-                    {variant ? <Badge variant="outline">Variante {variant.size} - {variant.color}</Badge> : <Badge variant="outline">Prodotto</Badge>}
+                    {variant ? (
+                      <Badge variant="outline">
+                        {getVariantCommercialLabel(variant)} - {getVariantSizeLabel(variant)}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">Prodotto</Badge>
+                    )}
                   </div>
                   <p className="truncate text-xs text-muted-foreground">{image.file_name}</p>
                 </div>

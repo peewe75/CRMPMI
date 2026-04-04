@@ -17,6 +17,7 @@ function QuickAddPageContent() {
   const [category, setCategory] = useState(searchParams.get('category') ?? 'general');
   const [size, setSize] = useState(searchParams.get('size') ?? '');
   const [color, setColor] = useState(searchParams.get('color') ?? '');
+  const [material, setMaterial] = useState(searchParams.get('material') ?? '');
   const [barcode, setBarcode] = useState(searchParams.get('barcode') ?? '');
   const [quantity, setQuantity] = useState(searchParams.get('quantity') ?? '1');
   const [costPrice, setCostPrice] = useState(searchParams.get('cost_price') ?? '');
@@ -40,6 +41,7 @@ function QuickAddPageContent() {
           category,
           size,
           color,
+          material,
           barcode,
           supplier_name: supplierName,
           quantity,
@@ -104,12 +106,16 @@ function QuickAddPageContent() {
               <Input value={supplierName} onChange={(event) => setSupplierName(event.target.value)} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Taglia</label>
-              <Input value={size} onChange={(event) => setSize(event.target.value)} required />
+              <label className="mb-1 block text-sm font-medium">Colore / Variante</label>
+              <Input value={color} onChange={(event) => setColor(event.target.value)} placeholder="Es: Crema" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Colore</label>
-              <Input value={color} onChange={(event) => setColor(event.target.value)} required />
+              <label className="mb-1 block text-sm font-medium">Materiale</label>
+              <Input value={material} onChange={(event) => setMaterial(event.target.value)} placeholder="Es: Pelle" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Taglia</label>
+              <Input value={size} onChange={(event) => setSize(event.target.value)} placeholder="Es: 43 o U" />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Barcode</label>

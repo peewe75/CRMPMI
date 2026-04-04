@@ -103,8 +103,9 @@ export interface ProductVariant {
   sku_internal: string | null;
   sku_supplier: string | null;
   barcode: string | null;
-  size: string;
+  size: string | null;
   color: string;
+  material: string | null;
   cost_price: number | null;
   sale_price: number | null;
   active: boolean;

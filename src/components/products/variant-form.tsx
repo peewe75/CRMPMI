@@ -39,12 +39,16 @@ export function VariantForm({ productId, variant, onSubmit }: VariantFormProps) 
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="mb-1 block text-sm font-medium">Taglia *</label>
-          <Input name="size" required defaultValue={variant?.size} placeholder="Es: 43" />
+          <label className="mb-1 block text-sm font-medium">Colore / Variante</label>
+          <Input name="color" defaultValue={variant?.color} placeholder="Es: Crema" />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">Colore *</label>
-          <Input name="color" required defaultValue={variant?.color} placeholder="Es: Bianco" />
+          <label className="mb-1 block text-sm font-medium">Materiale</label>
+          <Input name="material" defaultValue={variant?.material ?? ''} placeholder="Es: Pelle" />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">Taglia</label>
+          <Input name="size" defaultValue={variant?.size ?? ''} placeholder="Es: 43 o U" />
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Barcode</label>

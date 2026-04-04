@@ -6,6 +6,7 @@ import { getProduct } from '@/modules/products/application/products-service';
 import { listProductImagesWithSignedUrls } from '@/modules/products/application/product-images-service';
 import { getVariantStockByStores, listMovements, listStores } from '@/modules/inventory/application/inventory-service';
 import { MovementQuickForm } from '@/components/inventory/movement-quick-form';
+import { getVariantCommercialLabel, getVariantSizeLabel } from '@/modules/products/domain/variant-display';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -53,7 +54,7 @@ export default async function VariantDetailPage({
         <div>
           <h1 className="text-xl font-bold">Variante</h1>
           <p className="text-sm text-muted-foreground">
-            {product.brand} {product.model_name}
+            {product.brand} {product.model_name} · {getVariantCommercialLabel(variant)}
           </p>
         </div>
       </div>
@@ -61,12 +62,20 @@ export default async function VariantDetailPage({
       <Card>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
+            <p className="text-muted-foreground">Variante commerciale</p>
+            <p className="font-medium">{getVariantCommercialLabel(variant)}</p>
+          </div>
+          <div>
             <p className="text-muted-foreground">Taglia</p>
-            <p className="font-medium">{variant.size}</p>
+            <p className="font-medium">{getVariantSizeLabel(variant)}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Colore</p>
             <p className="font-medium">{variant.color}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Materiale</p>
+            <p className="font-medium">{variant.material ?? '-'}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Barcode</p>

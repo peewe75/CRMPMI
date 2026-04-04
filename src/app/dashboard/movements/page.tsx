@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { listMovements } from '@/modules/inventory/application/inventory-service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getVariantCommercialLabel, getVariantSizeLabel } from '@/modules/products/domain/variant-display';
 
 const TYPE_LABELS: Record<string, string> = {
   inbound: 'Entrata',
@@ -60,7 +61,7 @@ export default async function MovementsPage({
                   <p className="text-sm font-medium">
                     {variant?.products?.brand} {variant?.products?.model_name}
                     <span className="ml-1 text-muted-foreground">
-                      Tg. {variant?.size} {variant?.color}
+                      {variant ? `${getVariantCommercialLabel(variant)} - ${getVariantSizeLabel(variant)}` : '-'}
                     </span>
                   </p>
                   <p className="text-xs text-muted-foreground">

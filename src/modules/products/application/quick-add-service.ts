@@ -12,8 +12,9 @@ export interface QuickAddInput {
   model_name?: string;
   category?: string;
   supplier_name?: string;
-  size: string;
-  color: string;
+  size?: string;
+  color?: string;
+  material?: string;
   barcode?: string;
   sku_supplier?: string;
   sku_internal?: string;
@@ -67,8 +68,9 @@ export async function quickAddCatalogEntry(input: QuickAddInput): Promise<QuickA
 
   const variant = await createVariant({
     product_id: productId,
-    size: input.size.trim(),
-    color: input.color.trim(),
+    size: input.size?.trim() || undefined,
+    color: input.color?.trim() || undefined,
+    material: input.material?.trim() || undefined,
     barcode: input.barcode?.trim() || undefined,
     sku_supplier: input.sku_supplier?.trim() || undefined,
     sku_internal: input.sku_internal?.trim() || undefined,

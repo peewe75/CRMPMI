@@ -6,10 +6,11 @@ export const GET = withErrorHandler(async (request: Request) => {
   const q = searchParams.get('q') ?? undefined;
   const size = searchParams.get('size') ?? undefined;
   const color = searchParams.get('color') ?? undefined;
+  const material = searchParams.get('material') ?? undefined;
   const productId = searchParams.get('product_id') ?? undefined;
   const limit = Number(searchParams.get('limit') ?? '12');
 
-  if (!q && !size && !color && !productId) {
+  if (!q && !size && !color && !material && !productId) {
     return jsonError('At least one search parameter is required');
   }
 
@@ -17,6 +18,7 @@ export const GET = withErrorHandler(async (request: Request) => {
     q,
     size,
     color,
+    material,
     product_id: productId,
     limit: Number.isFinite(limit) ? limit : 12,
   });

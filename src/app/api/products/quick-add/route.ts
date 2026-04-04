@@ -11,6 +11,7 @@ export const POST = withErrorHandler(async (request: Request) => {
     supplier_name,
     size,
     color,
+    material,
     barcode,
     sku_supplier,
     sku_internal,
@@ -27,6 +28,7 @@ export const POST = withErrorHandler(async (request: Request) => {
     supplier_name?: string;
     size?: string;
     color?: string;
+    material?: string;
     barcode?: string;
     sku_supplier?: string;
     sku_internal?: string;
@@ -36,10 +38,6 @@ export const POST = withErrorHandler(async (request: Request) => {
     notes?: string;
     store_id?: string;
   };
-
-  if (!size?.trim() || !color?.trim()) {
-    return jsonError('size and color are required');
-  }
 
   if (!product_id && (!brand?.trim() || !model_name?.trim())) {
     return jsonError('brand and model_name are required');
@@ -65,6 +63,7 @@ export const POST = withErrorHandler(async (request: Request) => {
     supplier_name,
     size,
     color,
+    material,
     barcode,
     sku_supplier,
     sku_internal,

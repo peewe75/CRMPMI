@@ -4,6 +4,7 @@ import { listProducts } from '@/modules/products/application/products-service';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ProductSearch } from '@/components/products/product-search';
+import { getVariantGroupKey } from '@/modules/products/domain/variant-display';
 
 export default async function ProductsPage({
   searchParams,
@@ -63,7 +64,7 @@ export default async function ProductsPage({
                   </p>
                 </div>
                 <Badge variant="outline" className="ml-2 shrink-0">
-                  {(product.product_variants as unknown as { count: number }[])?.[0]?.count ?? 0} var.
+                  {new Set((product.product_variants ?? []).map((variant) => getVariantGroupKey(variant))).size} var.
                 </Badge>
               </Link>
             </li>

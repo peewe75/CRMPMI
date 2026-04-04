@@ -4,6 +4,7 @@ import { listVariants } from '@/modules/products/application/products-service';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getVariantCommercialLabel, getVariantSizeLabel } from '@/modules/products/domain/variant-display';
 
 export default async function VariantsPage({
   searchParams,
@@ -25,7 +26,7 @@ export default async function VariantsPage({
       <div>
         <h1 className="text-xl font-bold">Varianti</h1>
         <p className="text-sm text-muted-foreground">
-          Vista operativa di taglie, colori, barcode e stock per ogni articolo.
+          Vista operativa delle varianti commerciali, con la taglia come dettaglio stock opzionale.
         </p>
       </div>
 
@@ -34,7 +35,7 @@ export default async function VariantsPage({
           type="search"
           name="search"
           defaultValue={params.search ?? ''}
-          placeholder="Cerca barcode, taglia, colore o SKU..."
+          placeholder="Cerca barcode, taglia, colore, materiale o SKU..."
           className="h-10 flex-1 rounded-lg border border-border bg-white px-3 text-sm"
         />
         <Button type="submit" variant="outline">
@@ -72,7 +73,7 @@ export default async function VariantsPage({
                         {variant.products.brand} {variant.products.model_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Tg. {variant.size} - {variant.color}
+                        {getVariantCommercialLabel(variant)} - {getVariantSizeLabel(variant)}
                         {variant.barcode ? ` - Barcode ${variant.barcode}` : ''}
                       </p>
                     </div>

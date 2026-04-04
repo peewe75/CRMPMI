@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/supabase/audit';
 import { requireTenantContext } from '@/lib/auth/tenant';
 import { assertCanCreateProduct } from '@/modules/billing/application/billing-service';
+import { normalizeVariantColor, normalizeVariantMaterial, normalizeVariantSize } from '@/modules/products/domain/variant-display';
 import type { Product, ProductImage, ProductVariant } from '@/types/database';
 
 export interface VariantListItem extends ProductVariant {
@@ -19,8 +20,9 @@ export interface VariantMatchCandidate {
   product_id: string;
   brand: string;
   model_name: string;
-  size: string;
+  size: string | null;
   color: string;
+  material: string | null;
   barcode: string | null;
   sku_supplier: string | null;
   active: boolean;
@@ -42,7 +44,7 @@ export async function listProducts(filters?: {
 
   let query = db
     .from('products')
-    .select('*, product_variants(count)', { count: 'exact' })
+    .select('*, product_variants(id, color, material)', { count: 'exact' })
     .eq('org_id', orgId)
     .eq('archived', filters?.archived ?? false)
     .order('updated_at', { ascending: false })
@@ -59,7 +61,10 @@ export async function listProducts(filters?: {
   const { data, error, count } = await query;
   if (error) throw new Error(error.message);
 
-  return { products: data as (Product & { product_variants: [{ count: number }] })[], total: count ?? 0 };
+  return {
+    products: data as (Product & { product_variants: Pick<ProductVariant, 'id' | 'color' | 'material'>[] })[],
+    total: count ?? 0,
+  };
 }
 
 export async function getProduct(productId: string) {
@@ -203,6 +208,7 @@ export async function listVariants(filters?: {
       [
         `size.ilike.%${filters.search}%`,
         `color.ilike.%${filters.search}%`,
+        `material.ilike.%${filters.search}%`,
         `barcode.ilike.%${filters.search}%`,
         `sku_supplier.ilike.%${filters.search}%`,
         `sku_internal.ilike.%${filters.search}%`,
@@ -218,8 +224,9 @@ export async function listVariants(filters?: {
 
 export async function createVariant(input: {
   product_id: string;
-  size: string;
-  color: string;
+  size?: string | null;
+  color?: string | null;
+  material?: string | null;
   sku_internal?: string;
   sku_supplier?: string;
   barcode?: string;
@@ -228,14 +235,18 @@ export async function createVariant(input: {
 }) {
   const { orgId, userId } = await requireTenantContext();
   const db = createServiceClient();
+  const normalizedSize = normalizeVariantSize(input.size);
+  const normalizedColor = normalizeVariantColor(input.color);
+  const normalizedMaterial = normalizeVariantMaterial(input.material);
 
   const { data, error } = await db
     .from('product_variants')
     .insert({
       org_id: orgId,
       product_id: input.product_id,
-      size: input.size.trim(),
-      color: input.color.trim(),
+      size: normalizedSize,
+      color: normalizedColor,
+      material: normalizedMaterial,
       sku_internal: input.sku_internal?.trim() || null,
       sku_supplier: input.sku_supplier?.trim() || null,
       barcode: input.barcode?.trim() || null,
@@ -265,8 +276,9 @@ export async function updateVariant(
     sku_internal: string | null;
     sku_supplier: string | null;
     barcode: string | null;
-    size: string;
-    color: string;
+    size: string | null;
+    color: string | null;
+    material: string | null;
     cost_price: number | null;
     sale_price: number | null;
     active: boolean;
@@ -274,10 +286,16 @@ export async function updateVariant(
 ) {
   const { orgId, userId } = await requireTenantContext();
   const db = createServiceClient();
+  const patch = {
+    ...input,
+    ...(input.size !== undefined ? { size: normalizeVariantSize(input.size) } : {}),
+    ...(input.color !== undefined ? { color: normalizeVariantColor(input.color) } : {}),
+    ...(input.material !== undefined ? { material: normalizeVariantMaterial(input.material) } : {}),
+  };
 
   const { data, error } = await db
     .from('product_variants')
-    .update(input)
+    .update(patch)
     .eq('id', variantId)
     .eq('org_id', orgId)
     .select()
@@ -291,7 +309,7 @@ export async function updateVariant(
     entityType: 'variant',
     entityId: variantId,
     action: 'update',
-    payload: input,
+    payload: patch,
   });
 
   return data as ProductVariant;
@@ -316,6 +334,7 @@ export async function searchVariantsForMatching(input: {
   q?: string;
   size?: string | null;
   color?: string | null;
+  material?: string | null;
   product_id?: string | null;
   limit?: number;
 }) {
@@ -324,7 +343,7 @@ export async function searchVariantsForMatching(input: {
 
   let query = db
     .from('product_variants')
-    .select('id, product_id, size, color, barcode, sku_supplier, active, products:product_id(id, brand, model_name), stock_levels(quantity)')
+    .select('id, product_id, size, color, material, barcode, sku_supplier, active, products:product_id(id, brand, model_name), stock_levels(quantity)')
     .eq('org_id', orgId)
     .limit(input.limit ?? 40);
 
@@ -338,6 +357,10 @@ export async function searchVariantsForMatching(input: {
 
   if (input.color?.trim()) {
     query = query.ilike('color', `%${input.color.trim()}%`);
+  }
+
+  if (input.material?.trim()) {
+    query = query.ilike('material', `%${input.material.trim()}%`);
   }
 
   const { data, error } = await query;
@@ -356,8 +379,9 @@ export async function searchVariantsForMatching(input: {
         product_id: variant.product_id,
         brand: product?.brand ?? '',
         model_name: product?.model_name ?? '',
-        size: variant.size,
+        size: variant.size ?? null,
         color: variant.color,
+        material: variant.material ?? null,
         barcode: variant.barcode,
         sku_supplier: variant.sku_supplier,
         active: variant.active,
@@ -370,8 +394,9 @@ export async function searchVariantsForMatching(input: {
       const haystack = [
         candidate.brand,
         candidate.model_name,
-        candidate.size,
+        candidate.size ?? '',
         candidate.color,
+        candidate.material ?? '',
         candidate.barcode ?? '',
         candidate.sku_supplier ?? '',
       ].join(' ').toLowerCase();

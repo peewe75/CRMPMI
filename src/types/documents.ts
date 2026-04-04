@@ -112,8 +112,9 @@ export interface VoiceLookupMatch {
   product_id: string;
   brand: string;
   model_name: string;
-  size: string;
+  size: string | null;
   color: string;
+  material?: string | null;
   quantity: number;
   similarity: number;
   exact: boolean;
