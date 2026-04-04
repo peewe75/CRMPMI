@@ -4,6 +4,7 @@ import { parseVoiceTranscript } from '../src/modules/voice/application/voice-int
 const cases = [
   { input: 'vendute 2 nike js numero 44', expectedIntent: 'inventory_outbound', expectedItems: 1, expectedSize: '44' },
   { input: 'vendute due nike js numero 44', expectedIntent: 'inventory_outbound', expectedItems: 1, expectedSize: '44', expectedQuantity: 2, expectedBrand: 'Nike' },
+  { input: 'ho venduto due nike js numero 44', expectedIntent: 'inventory_outbound', expectedItems: 1, expectedSize: '44', expectedQuantity: 2, expectedBrand: 'Nike' },
   { input: 'vendute 2 nike js 1 numero 43 e 1 numero 44', expectedIntent: 'inventory_outbound', expectedItems: 2 },
   { input: 'caricate 3 adidas samba 42 nere', expectedIntent: 'inventory_inbound', expectedItems: 1, expectedColor: 'Nero' },
   { input: 'rettifica nike js 44 meno 1', expectedIntent: 'inventory_adjustment', expectedItems: 1, expectedDelta: -1 },

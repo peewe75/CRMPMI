@@ -104,7 +104,10 @@ export function splitBrandAndModel(text: string) {
 
 export function stripIntentPrefix(text: string) {
   return normalizeVoiceText(text)
-    .replace(/^(vendut[oeia]|scaricat[oeia]|caricat[oeia]|rettifica|rettificare|quante|quanti|quanto|quanta|c e disponibilita|ce disponibilita|disponibilita)\b/, '')
+    .replace(
+      /^(?:(?:ho|hai|ha|abbiamo|avete|hanno)\s+)?(vendut[oeia]|scaricat[oeia]|caricat[oeia]|aggiunt[oeia]|entrat[oeia]|rettifica|rettificare|quante|quanti|quanto|quanta|c e disponibilita|ce disponibilita|disponibilita)\b/,
+      ''
+    )
     .trim();
 }
 
