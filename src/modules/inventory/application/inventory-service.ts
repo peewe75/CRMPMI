@@ -198,7 +198,7 @@ export async function getStockLevels(filters?: {
 
   let query = db
     .from('stock_levels')
-    .select('*, product_variants(*, products:product_id(brand, model_name, category))')
+    .select('*, product_variants(*, products:product_id(id, brand, model_name, category))')
     .eq('org_id', orgId)
     .gt('quantity', 0);
 

@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
+export const dynamic = 'force-dynamic';
+
 export default async function VariantDetailPage({
   params,
 }: {

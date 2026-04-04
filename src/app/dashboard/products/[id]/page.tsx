@@ -8,6 +8,8 @@ import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { listProductImagesWithSignedUrls } from '@/modules/products/application/product-images-service';
 import { getProduct } from '@/modules/products/application/products-service';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProductDetailPage({
   params,
 }: {

@@ -4,6 +4,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
+export const dynamic = 'force-dynamic';
+
 export default async function InventoryPage({
   searchParams,
 }: {
@@ -72,14 +74,17 @@ export default async function InventoryPage({
                       <li key={`${item.store_id}-${item.variant_id}`} className="flex items-center justify-between py-2 text-sm">
                         <div>
                           <Link
-                            href={`/dashboard/products/${variant.products.id}/variants/${variant.id}`}
+                            href={`/dashboard/products/${variant.products.id}`}
                             className="font-medium hover:underline"
                           >
                             {variant.products.brand} {variant.products.model_name}
                           </Link>
-                          <span className="ml-2 text-muted-foreground">
+                          <Link
+                            href={`/dashboard/products/${variant.products.id}/variants/${variant.id}`}
+                            className="ml-2 text-muted-foreground hover:underline"
+                          >
                             Tg. {variant.size} {variant.color}
-                          </span>
+                          </Link>
                         </div>
                         <Badge variant={Number(item.quantity) > 0 ? 'success' : 'destructive'}>
                           {item.quantity}
