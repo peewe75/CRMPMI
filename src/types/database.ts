@@ -12,6 +12,32 @@ export type Gender = 'M' | 'F' | 'U'; // male, female, unisex
 export type MovementType = 'inbound' | 'outbound' | 'adjustment' | 'transfer';
 
 export type DocumentType = 'invoice' | 'ddt' | 'unknown';
+export type DocumentSourceChannel = 'upload' | 'camera' | 'gmail' | 'manual';
+export type DocumentCaptureType =
+  | 'pdf_document'
+  | 'printed_document_photo'
+  | 'handwritten_note'
+  | 'mixed_document'
+  | 'unknown';
+
+export type ProposalSourceType =
+  | 'voice'
+  | 'document'
+  | 'handwritten_photo'
+  | 'gmail_attachment'
+  | 'manual';
+
+export type ProposalType = 'inbound' | 'outbound' | 'adjustment' | 'lookup';
+
+export type ProposalStatus = 'pending_review' | 'approved' | 'rejected' | 'applied';
+
+export type ProposalItemStatus =
+  | 'pending'
+  | 'matched'
+  | 'unmatched'
+  | 'applied'
+  | 'rejected'
+  | 'skipped';
 
 export type DocumentStatus =
   | 'uploaded'
@@ -34,7 +60,10 @@ export type AuditAction =
   | 'delete'
   | 'archive'
   | 'import'
-  | 'movement';
+  | 'movement'
+  | 'approve'
+  | 'reject'
+  | 'apply';
 
 // ---------- Base ----------
 
@@ -83,6 +112,20 @@ export interface ProductVariant {
   updated_at: string;
 }
 
+export interface ProductImage {
+  id: string;
+  org_id: string;
+  product_id: string | null;
+  variant_id: string | null;
+  file_path: string;
+  file_name: string;
+  mime_type: string;
+  is_primary: boolean;
+  sort_order: number;
+  created_by: string;
+  created_at: string;
+}
+
 // ---------- Inventory ----------
 
 export interface InventoryMovement {
@@ -95,6 +138,7 @@ export interface InventoryMovement {
   notes: string | null;
   source_document_type: string | null;
   source_document_id: string | null;
+  source_proposal_id: string | null;
   created_by: string;
   created_at: string;
 }
@@ -118,6 +162,9 @@ export interface UploadedDocument {
   mime_type: string;
   file_size: number | null;
   document_type: DocumentType;
+  source_channel: DocumentSourceChannel | null;
+  capture_type: DocumentCaptureType | null;
+  requires_review: boolean;
   supplier_name_raw: string | null;
   supplier_name_normalized: string | null;
   supplier_vat_number: string | null;
@@ -169,6 +216,53 @@ export interface DocumentImportSession {
   movements_created: number;
   lines_skipped: number;
   created_at: string;
+}
+
+// ---------- Proposals ----------
+
+export interface InventoryProposal {
+  id: string;
+  org_id: string;
+  source_type: ProposalSourceType;
+  proposal_type: ProposalType;
+  status: ProposalStatus;
+  target_store_id: string | null;
+  raw_input: string | null;
+  parsed_json: Record<string, unknown> | null;
+  confidence: number | null;
+  source_metadata: Record<string, unknown>;
+  source_document_id: string | null;
+  source_uploaded_document_id: string | null;
+  source_email_ingestion_id: string | null;
+  created_by: string | null;
+  approved_by: string | null;
+  rejected_by: string | null;
+  applied_by: string | null;
+  created_at: string;
+  approved_at: string | null;
+  rejected_at: string | null;
+  applied_at: string | null;
+  updated_at: string;
+}
+
+export interface InventoryProposalItem {
+  id: string;
+  org_id: string;
+  proposal_id: string;
+  line_index: number;
+  raw_description: string | null;
+  matched_product_id: string | null;
+  matched_variant_id: string | null;
+  interpreted_action: ProposalType | null;
+  quantity: number | null;
+  size_raw: string | null;
+  color_raw: string | null;
+  match_score: number | null;
+  confidence: number | null;
+  status: ProposalItemStatus;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // ---------- Audit ----------

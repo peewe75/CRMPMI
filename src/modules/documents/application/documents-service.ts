@@ -3,7 +3,13 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/supabase/audit';
 import { requireTenantContext } from '@/lib/auth/tenant';
-import type { UploadedDocument, DocumentLineItem, DocumentImportSession } from '@/types/database';
+import type {
+  DocumentCaptureType,
+  DocumentLineItem,
+  DocumentImportSession,
+  DocumentSourceChannel,
+  UploadedDocument,
+} from '@/types/database';
 
 // ---------- Upload ----------
 
@@ -14,6 +20,9 @@ export async function createDocumentRecord(input: {
   file_size: number;
   document_type?: 'invoice' | 'ddt' | 'unknown';
   store_id?: string;
+  source_channel?: DocumentSourceChannel;
+  capture_type?: DocumentCaptureType;
+  requires_review?: boolean;
 }) {
   const { orgId, userId } = await requireTenantContext();
   const db = createServiceClient();
@@ -29,6 +38,9 @@ export async function createDocumentRecord(input: {
       file_size: input.file_size,
       document_type: input.document_type ?? 'unknown',
       store_id: input.store_id || null,
+      source_channel: input.source_channel ?? 'upload',
+      capture_type: input.capture_type ?? inferCaptureType(input.mime_type),
+      requires_review: input.requires_review ?? true,
       status: 'uploaded',
     })
     .select()
@@ -42,7 +54,12 @@ export async function createDocumentRecord(input: {
     entityType: 'document',
     entityId: data.id,
     action: 'create',
-    payload: { file_name: input.file_name, document_type: input.document_type },
+    payload: {
+      file_name: input.file_name,
+      document_type: input.document_type,
+      source_channel: input.source_channel ?? 'upload',
+      capture_type: input.capture_type ?? inferCaptureType(input.mime_type),
+    },
   });
 
   return data as UploadedDocument;
@@ -301,4 +318,10 @@ export async function deleteDocumentRecord(documentId: string) {
   });
 
   return document as UploadedDocument;
+}
+
+function inferCaptureType(mimeType: string): DocumentCaptureType {
+  if (mimeType.includes('pdf')) return 'pdf_document';
+  if (mimeType.startsWith('image/')) return 'printed_document_photo';
+  return 'unknown';
 }

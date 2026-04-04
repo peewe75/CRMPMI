@@ -1,5 +1,5 @@
 import { requireFeatureEnabled } from '@/lib/auth/feature-flags';
-import { parseVoiceTranscript } from '@/modules/voice/application/voice-parser';
+import { interpretVoiceCommand } from '@/modules/voice/application/voice-service';
 import { jsonOk, jsonError, withErrorHandler } from '@/lib/utils/api';
 
 export const POST = withErrorHandler(async (request: Request) => {
@@ -11,6 +11,6 @@ export const POST = withErrorHandler(async (request: Request) => {
     return jsonError('text is required');
   }
 
-  const result = parseVoiceTranscript(text);
+  const result = await interpretVoiceCommand(text);
   return jsonOk(result);
 });

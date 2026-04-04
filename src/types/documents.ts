@@ -43,6 +43,7 @@ export interface DocumentParserInput {
   fileUrl: string;
   mimeType: string;
   documentType?: 'invoice' | 'ddt' | 'unknown';
+  captureType?: 'pdf_document' | 'printed_document_photo' | 'handwritten_note' | 'mixed_document' | 'unknown';
 }
 
 /**
@@ -67,11 +68,54 @@ export interface MatchResult {
 // ---------- Voice ----------
 
 export interface VoiceParseResult {
+  raw_text: string;
+  normalized_text: string;
+  intent: VoiceIntent;
+  confidence: number;
+  needs_review: boolean;
+  command: {
+    intent: VoiceIntent;
+    confidence: number;
+    subject_text: string;
+    warnings: string[];
+    items: VoiceCommandItem[];
+  };
+  lookup_result?: VoiceLookupResponse | null;
+}
+
+export type VoiceIntent =
+  | 'inventory_inbound'
+  | 'inventory_outbound'
+  | 'inventory_adjustment'
+  | 'stock_lookup'
+  | 'product_search';
+
+export interface VoiceCommandItem {
+  line_index: number;
   brand: string | null;
   model_name: string | null;
   size: string | null;
   color: string | null;
   quantity: number | null;
-  raw_text: string;
+  quantity_delta: number | null;
+  raw_description: string;
   confidence: number;
+}
+
+export interface VoiceLookupMatch {
+  variant_id: string;
+  product_id: string;
+  brand: string;
+  model_name: string;
+  size: string;
+  color: string;
+  quantity: number;
+  similarity: number;
+  exact: boolean;
+}
+
+export interface VoiceLookupResponse {
+  exact_matches: VoiceLookupMatch[];
+  similar_matches: VoiceLookupMatch[];
+  summary: string;
 }

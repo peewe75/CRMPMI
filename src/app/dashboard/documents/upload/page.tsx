@@ -12,6 +12,7 @@ export default function DocumentUploadPage() {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<'invoice' | 'ddt' | 'unknown'>('unknown');
+  const [captureType, setCaptureType] = useState<'pdf_document' | 'printed_document_photo' | 'handwritten_note' | 'mixed_document' | 'unknown'>('unknown');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +30,8 @@ export default function DocumentUploadPage() {
     const formData = new FormData();
     formData.set('file', file);
     formData.set('document_type', documentType);
+    formData.set('capture_type', file.type.startsWith('image/') && captureType === 'unknown' ? 'printed_document_photo' : captureType);
+    formData.set('source_channel', 'upload');
 
     try {
       const response = await fetch('/api/documents/upload', {
@@ -78,8 +81,27 @@ export default function DocumentUploadPage() {
             <Input
               type="file"
               accept=".pdf,image/*"
+              capture={captureType === 'pdf_document' ? undefined : 'environment'}
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Tipo acquisizione</label>
+            <select
+              value={captureType}
+              onChange={(event) => setCaptureType(event.target.value as 'pdf_document' | 'printed_document_photo' | 'handwritten_note' | 'mixed_document' | 'unknown')}
+              className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm"
+            >
+              <option value="unknown">Non specificato</option>
+              <option value="pdf_document">PDF / documento digitale</option>
+              <option value="printed_document_photo">Foto documento stampato</option>
+              <option value="handwritten_note">Foto foglio scritto a mano</option>
+              <option value="mixed_document">Foto documento misto</option>
+            </select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Le foto documento e i fogli scritti a mano entrano sempre in review prima di qualsiasi proposta di magazzino.
+            </p>
           </div>
 
           {error ? (

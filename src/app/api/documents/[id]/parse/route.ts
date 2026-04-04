@@ -32,6 +32,7 @@ export const POST = withErrorHandler(async (
       fileUrl,
       mimeType: document.mime_type,
       documentType: document.document_type as 'invoice' | 'ddt' | 'unknown',
+      captureType: document.capture_type ?? 'unknown',
     });
 
     // Save parsed data to document

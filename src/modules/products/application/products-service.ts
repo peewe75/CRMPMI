@@ -4,7 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { writeAuditLog } from '@/lib/supabase/audit';
 import { requireTenantContext } from '@/lib/auth/tenant';
 import { assertCanCreateProduct } from '@/modules/billing/application/billing-service';
-import type { Product, ProductVariant } from '@/types/database';
+import type { Product, ProductImage, ProductVariant } from '@/types/database';
 
 export interface VariantListItem extends ProductVariant {
   products: Pick<Product, 'id' | 'brand' | 'model_name' | 'category'>;
@@ -12,6 +12,19 @@ export interface VariantListItem extends ProductVariant {
     quantity: number;
     store_id: string;
   }>;
+}
+
+export interface VariantMatchCandidate {
+  id: string;
+  product_id: string;
+  brand: string;
+  model_name: string;
+  size: string;
+  color: string;
+  barcode: string | null;
+  sku_supplier: string | null;
+  active: boolean;
+  total_stock: number;
 }
 
 // ---------- Products ----------
@@ -55,13 +68,13 @@ export async function getProduct(productId: string) {
 
   const { data, error } = await db
     .from('products')
-    .select('*, product_variants(*)')
+    .select('*, product_variants(*), product_images(*)')
     .eq('id', productId)
     .eq('org_id', orgId)
     .single();
 
   if (error) throw new Error('Product not found');
-  return data as Product & { product_variants: ProductVariant[] };
+  return data as Product & { product_variants: ProductVariant[]; product_images: ProductImage[] };
 }
 
 export async function createProduct(input: {
@@ -297,4 +310,74 @@ export async function resolveBarcode(barcode: string) {
 
   if (error) return null;
   return data;
+}
+
+export async function searchVariantsForMatching(input: {
+  q?: string;
+  size?: string | null;
+  color?: string | null;
+  product_id?: string | null;
+  limit?: number;
+}) {
+  const { orgId } = await requireTenantContext();
+  const db = createServiceClient();
+
+  let query = db
+    .from('product_variants')
+    .select('id, product_id, size, color, barcode, sku_supplier, active, products:product_id(id, brand, model_name), stock_levels(quantity)')
+    .eq('org_id', orgId)
+    .limit(input.limit ?? 40);
+
+  if (input.product_id) {
+    query = query.eq('product_id', input.product_id);
+  }
+
+  if (input.size?.trim()) {
+    query = query.eq('size', input.size.trim());
+  }
+
+  if (input.color?.trim()) {
+    query = query.ilike('color', `%${input.color.trim()}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const normalizedQuery = input.q?.trim().toLowerCase() ?? '';
+
+  return (data ?? [])
+    .map((variant) => {
+      const product = Array.isArray(variant.products) ? variant.products[0] : variant.products;
+      const stockLevels = Array.isArray(variant.stock_levels) ? variant.stock_levels : [];
+      const totalStock = stockLevels.reduce((sum, level) => sum + Number(level.quantity ?? 0), 0);
+
+      return {
+        id: variant.id,
+        product_id: variant.product_id,
+        brand: product?.brand ?? '',
+        model_name: product?.model_name ?? '',
+        size: variant.size,
+        color: variant.color,
+        barcode: variant.barcode,
+        sku_supplier: variant.sku_supplier,
+        active: variant.active,
+        total_stock: totalStock,
+      } satisfies VariantMatchCandidate;
+    })
+    .filter((candidate) => {
+      if (!normalizedQuery) return true;
+
+      const haystack = [
+        candidate.brand,
+        candidate.model_name,
+        candidate.size,
+        candidate.color,
+        candidate.barcode ?? '',
+        candidate.sku_supplier ?? '',
+      ].join(' ').toLowerCase();
+
+      return haystack.includes(normalizedQuery);
+    })
+    .sort((left, right) => right.total_stock - left.total_stock)
+    .slice(0, input.limit ?? 40);
 }

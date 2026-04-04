@@ -25,6 +25,10 @@ export const POST = withErrorHandler(async (request: Request) => {
   const file = formData.get('file') as File | null;
   const documentType = (formData.get('document_type') as string) || 'unknown';
   const storeId = formData.get('store_id') as string | null;
+  const sourceChannel = (formData.get('source_channel') as string) || 'upload';
+  const captureType =
+    (formData.get('capture_type') as string) ||
+    (file?.type.startsWith('image/') ? 'printed_document_photo' : 'pdf_document');
 
   if (!file) {
     return jsonError('file is required');
@@ -65,6 +69,9 @@ export const POST = withErrorHandler(async (request: Request) => {
     file_size: file.size,
     document_type: documentType as 'invoice' | 'ddt' | 'unknown',
     store_id: storeId || undefined,
+    source_channel: sourceChannel as never,
+    capture_type: captureType as never,
+    requires_review: true,
   });
 
   return jsonOk({ document }, 201);

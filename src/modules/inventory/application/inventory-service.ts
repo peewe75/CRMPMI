@@ -124,6 +124,7 @@ export async function createMovement(input: {
   notes?: string;
   source_document_type?: string;
   source_document_id?: string;
+  source_proposal_id?: string;
 }) {
   const { orgId, userId } = await requireTenantContext();
   const db = createServiceClient();
@@ -139,6 +140,7 @@ export async function createMovement(input: {
       notes: input.notes?.trim() || null,
       source_document_type: input.source_document_type || null,
       source_document_id: input.source_document_id || null,
+      source_proposal_id: input.source_proposal_id || null,
       created_by: userId,
     })
     .select()

@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getProduct } from '@/modules/products/application/products-service';
-import { Button } from '@/components/ui/button';
-import { Card, CardTitle, CardContent } from '@/components/ui/card';
+import { ArrowLeft, Pencil, Plus } from 'lucide-react';
+import { ProductImageManager } from '@/components/products/product-image-manager';
 import { VariantsList } from '@/components/products/variants-list';
-import { Pencil, Plus, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
+import { listProductImagesWithSignedUrls } from '@/modules/products/application/product-images-service';
+import { getProduct } from '@/modules/products/application/products-service';
 
 export default async function ProductDetailPage({
   params,
@@ -12,57 +14,90 @@ export default async function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  let product;
+  const product = await getProduct(id).catch(() => null);
 
-  try {
-    product = await getProduct(id);
-  } catch {
+  if (!product) {
     notFound();
   }
 
+  const images = await listProductImagesWithSignedUrls({ product_id: id }).catch(() => []);
+  const primaryImage = images.find((image) => image.is_primary) ?? images[0] ?? null;
+
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4 p-4">
       <div className="flex items-center gap-2">
         <Button asChild variant="ghost" size="icon">
-          <Link href="/dashboard/products"><ArrowLeft className="h-4 w-4" /></Link>
+          <Link href="/dashboard/products">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
         </Button>
-        <h1 className="text-xl font-bold flex-1 truncate">
+        <h1 className="flex-1 truncate text-xl font-bold">
           {product.brand} {product.model_name}
         </h1>
         <Button asChild variant="outline" size="sm">
           <Link href={`/dashboard/products/${id}/edit`}>
             <Pencil className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1">Modifica</span>
+            <span className="ml-1 hidden sm:inline">Modifica</span>
           </Link>
         </Button>
       </div>
 
       <Card>
         <CardContent>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <dt className="text-muted-foreground">Categoria</dt>
-            <dd>{product.category}</dd>
-            <dt className="text-muted-foreground">Genere</dt>
-            <dd>{product.gender ?? '—'}</dd>
-            <dt className="text-muted-foreground">Fornitore</dt>
-            <dd>{product.supplier_name ?? '—'}</dd>
-            <dt className="text-muted-foreground">Stagione</dt>
-            <dd>{product.season ?? '—'}</dd>
-            {product.notes && (
-              <>
-                <dt className="text-muted-foreground">Note</dt>
-                <dd className="col-span-1">{product.notes}</dd>
-              </>
-            )}
-          </dl>
+          <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
+            <div className="overflow-hidden rounded-xl border border-border bg-gray-100">
+              {primaryImage?.signed_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={primaryImage.signed_url}
+                  alt={`${product.brand} ${product.model_name}`}
+                  className="h-44 w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-44 items-center justify-center text-sm text-muted-foreground">
+                  Nessuna immagine
+                </div>
+              )}
+            </div>
+
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <dt className="text-muted-foreground">Categoria</dt>
+              <dd>{product.category}</dd>
+              <dt className="text-muted-foreground">Genere</dt>
+              <dd>{product.gender ?? '-'}</dd>
+              <dt className="text-muted-foreground">Fornitore</dt>
+              <dd>{product.supplier_name ?? '-'}</dd>
+              <dt className="text-muted-foreground">Stagione</dt>
+              <dd>{product.season ?? '-'}</dd>
+              <dt className="text-muted-foreground">Immagini</dt>
+              <dd>{images.length}</dd>
+              {product.notes ? (
+                <>
+                  <dt className="text-muted-foreground">Note</dt>
+                  <dd>{product.notes}</dd>
+                </>
+              ) : null}
+            </dl>
+          </div>
         </CardContent>
       </Card>
+
+      <ProductImageManager
+        productId={id}
+        variants={product.product_variants.map((variant) => ({
+          id: variant.id,
+          size: variant.size,
+          color: variant.color,
+        }))}
+        initialImages={images}
+      />
 
       <div className="flex items-center justify-between">
         <CardTitle>Varianti ({product.product_variants.length})</CardTitle>
         <Button asChild size="sm">
           <Link href={`/dashboard/products/${id}/variants/new`}>
-            <Plus className="h-4 w-4" /> Aggiungi
+            <Plus className="h-4 w-4" />
+            Aggiungi
           </Link>
         </Button>
       </div>

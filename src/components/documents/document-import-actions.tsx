@@ -42,18 +42,21 @@ export function DocumentImportActions({
       }
 
       const summary = payload.summary as {
-        products_created: number;
-        variants_created: number;
-        variants_updated: number;
-        movements_created: number;
+        products_to_create: number;
+        variants_to_create: number;
+        existing_variants_linked: number;
         lines_skipped: number;
       };
+      const alreadyExists = Boolean(payload.already_exists);
 
       setMessage(
-        `Import completato: ${summary.products_created} prodotti, ${summary.variants_created} varianti nuove, ${summary.movements_created} movimenti.`
+        alreadyExists
+          ? `Esiste gia una proposta collegata a questo documento. Aprila nella inbox per confermare e applicare i movimenti.`
+          : `Proposta creata: ${summary.products_to_create} prodotti da creare, ${summary.variants_to_create} varianti da creare, ${summary.existing_variants_linked} righe gia collegate.`
       );
 
       startTransition(() => {
+        router.push(`/dashboard/proposals`);
         router.refresh();
       });
     } catch (importError) {
@@ -69,7 +72,7 @@ export function DocumentImportActions({
     <div className="flex flex-col gap-2 sm:items-end">
       <Button onClick={handleImport} disabled={isPending} size="sm">
         {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-        {isPending ? 'Import in corso...' : 'Importa in catalogo'}
+        {isPending ? 'Creazione proposta...' : 'Genera proposta da revisione'}
       </Button>
 
       {message ? <p className="text-xs text-green-700">{message}</p> : null}

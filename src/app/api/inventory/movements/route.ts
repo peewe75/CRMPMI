@@ -5,7 +5,7 @@ import { jsonOk, jsonError, withErrorHandler } from '@/lib/utils/api';
 export const POST = withErrorHandler(async (request: Request) => {
   const body = await request.json();
 
-  const { variant_id, movement_type, quantity, store_id, notes, source_document_type, source_document_id } = body as {
+  const { variant_id, movement_type, quantity, store_id, notes, source_document_type, source_document_id, source_proposal_id } = body as {
     variant_id: string;
     movement_type: 'inbound' | 'outbound' | 'adjustment' | 'transfer';
     quantity: number;
@@ -13,6 +13,7 @@ export const POST = withErrorHandler(async (request: Request) => {
     notes?: string;
     source_document_type?: string;
     source_document_id?: string;
+    source_proposal_id?: string;
   };
 
   if (!variant_id || !movement_type || quantity == null) {
@@ -34,6 +35,7 @@ export const POST = withErrorHandler(async (request: Request) => {
     notes,
     source_document_type,
     source_document_id,
+    source_proposal_id,
   });
 
   return jsonOk(movement, 201);

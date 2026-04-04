@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { ProductImageManager } from '@/components/products/product-image-manager';
 import { getProduct } from '@/modules/products/application/products-service';
+import { listProductImagesWithSignedUrls } from '@/modules/products/application/product-images-service';
 import { getVariantStockByStores, listMovements, listStores } from '@/modules/inventory/application/inventory-service';
 import { MovementQuickForm } from '@/components/inventory/movement-quick-form';
 import { Button } from '@/components/ui/button';
@@ -30,6 +32,10 @@ export default async function VariantDetailPage({
     listMovements({ variant_id: variantId, limit: 10 }),
     listStores(),
   ]);
+  const variantImages = await listProductImagesWithSignedUrls({
+    product_id: id,
+    variant_id: variantId,
+  }).catch(() => []);
 
   const defaultStoreId = stores.find((store) => store.is_default)?.id ?? stores[0]?.id;
   const totalStock = stockLevels.reduce((sum, level) => sum + Number(level.quantity), 0);
@@ -87,6 +93,15 @@ export default async function VariantDetailPage({
           </Badge>
         </div>
       </Card>
+
+      <ProductImageManager
+        productId={id}
+        variants={[{ id: variant.id, size: variant.size, color: variant.color }]}
+        initialImages={variantImages}
+        scopeVariantId={variant.id}
+        title="Immagini variante"
+        description="Gestisci le foto dedicate a questa variante mantenendo separata la gallery generale del prodotto."
+      />
 
       <Card>
         <div className="space-y-3">

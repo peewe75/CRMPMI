@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mic, MicOff, Check, RotateCcw } from 'lucide-react';
+import { Mic, MicOff, Check, RotateCcw, Search, ClipboardCheck } from 'lucide-react';
 import { useVoiceInput } from '@/hooks/use-voice-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,50 +10,20 @@ import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import type { VoiceParseResult } from '@/types/documents';
 
-interface VoiceFormState {
-  brand: string;
-  model_name: string;
-  size: string;
-  color: string;
-  quantity: string;
-  category: string;
-}
-
-const EMPTY_FORM: VoiceFormState = {
-  brand: '',
-  model_name: '',
-  size: '',
-  color: '',
-  quantity: '1',
-  category: 'general',
-};
-
 export default function VoicePage() {
   const router = useRouter();
   const { isListening, transcript, error, isSupported, startListening, stopListening, resetTranscript } =
     useVoiceInput();
 
   const [parsed, setParsed] = useState<VoiceParseResult | null>(null);
-  const [form, setForm] = useState<VoiceFormState>(EMPTY_FORM);
   const [manualText, setManualText] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isParsing, startParsing] = useTransition();
   const [isSaving, startSaving] = useTransition();
-
-  function updateForm<K extends keyof VoiceFormState>(key: K, value: VoiceFormState[K]) {
-    setForm((current) => ({ ...current, [key]: value }));
-  }
-
-  function syncForm(data: VoiceParseResult) {
-    setForm({
-      brand: data.brand ?? '',
-      model_name: data.model_name ?? '',
-      size: data.size ?? '',
-      color: data.color ?? '',
-      quantity: String(data.quantity ?? 1),
-      category: 'general',
-    });
-  }
+  const isMutationIntent = useMemo(
+    () => parsed ? ['inventory_inbound', 'inventory_outbound', 'inventory_adjustment'].includes(parsed.intent) : false,
+    [parsed]
+  );
 
   function handleParse(text: string) {
     startParsing(async () => {
@@ -64,7 +34,6 @@ export default function VoicePage() {
       });
       const data = await res.json();
       setParsed(data);
-      syncForm(data);
       setSaveError(null);
     });
   }
@@ -74,24 +43,18 @@ export default function VoicePage() {
     resetTranscript();
     setManualText('');
     setSaveError(null);
-    setForm(EMPTY_FORM);
   }
 
-  function handleConfirmCreate() {
+  function handleConfirmAction() {
+    if (!parsed || !isMutationIntent) return;
     setSaveError(null);
 
     startSaving(async () => {
-      const response = await fetch('/api/products/quick-add', {
+      const response = await fetch('/api/voice/proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          brand: form.brand,
-          model_name: form.model_name,
-          category: form.category,
-          size: form.size,
-          color: form.color,
-          quantity: form.quantity,
-          notes: `Creazione da input vocale: ${parsed?.raw_text ?? ''}`,
+          text: parsed.raw_text,
         }),
       });
 
@@ -101,14 +64,14 @@ export default function VoicePage() {
         return;
       }
 
-      router.push(`/dashboard/products/${payload.product_id}`);
+      router.push('/dashboard/proposals');
       router.refresh();
     });
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-xl font-bold flex items-center gap-2">
+    <div className="space-y-4 p-4">
+      <h1 className="flex items-center gap-2 text-xl font-bold">
         <Mic className="h-5 w-5" /> Input Vocale
       </h1>
 
@@ -118,9 +81,7 @@ export default function VoicePage() {
             <button
               onClick={isListening ? stopListening : startListening}
               className={`flex h-20 w-20 items-center justify-center rounded-full transition ${
-                isListening
-                  ? 'bg-destructive text-white animate-pulse'
-                  : 'bg-accent text-accent-foreground'
+                isListening ? 'animate-pulse bg-destructive text-white' : 'bg-accent text-accent-foreground'
               }`}
             >
               {isListening ? <MicOff className="h-8 w-8" /> : <Mic className="h-8 w-8" />}
@@ -135,11 +96,11 @@ export default function VoicePage() {
           </p>
         )}
 
-        {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+        {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
 
-        {transcript && (
+        {transcript ? (
           <div className="mt-4 w-full">
-            <p className="text-sm font-medium mb-1">Trascrizione:</p>
+            <p className="mb-1 text-sm font-medium">Trascrizione:</p>
             <p className="rounded-lg bg-muted p-3 text-sm italic">&ldquo;{transcript}&rdquo;</p>
             <Button
               onClick={() => handleParse(transcript)}
@@ -149,11 +110,11 @@ export default function VoicePage() {
               {isParsing ? <Spinner className="h-4 w-4" /> : 'Analizza'}
             </Button>
           </div>
-        )}
+        ) : null}
       </Card>
 
       <Card>
-        <p className="text-sm font-medium mb-2">Oppure scrivi manualmente</p>
+        <p className="mb-2 text-sm font-medium">Oppure scrivi manualmente</p>
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -164,7 +125,7 @@ export default function VoicePage() {
           <Input
             value={manualText}
             onChange={(event) => setManualText(event.target.value)}
-            placeholder="Es: adidas samba 43 bianca 2 pezzi"
+            placeholder="Es: vendute 2 nike js numero 44"
             className="flex-1"
           />
           <Button type="submit" disabled={isParsing}>
@@ -173,70 +134,78 @@ export default function VoicePage() {
         </form>
       </Card>
 
-      {parsed && (
+      {parsed ? (
         <Card className="space-y-3">
-          <h2 className="font-semibold">Dati estratti</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">Interpretazione</h2>
+            <p className="text-xs text-muted-foreground">
+              Confidenza: {(parsed.confidence * 100).toFixed(0)}%
+            </p>
+          </div>
 
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <label className="text-muted-foreground">Brand</label>
-              <Input value={form.brand} onChange={(event) => updateForm('brand', event.target.value)} className="mt-1" />
-            </div>
-            <div>
-              <label className="text-muted-foreground">Modello</label>
-              <Input value={form.model_name} onChange={(event) => updateForm('model_name', event.target.value)} className="mt-1" />
-            </div>
-            <div>
-              <label className="text-muted-foreground">Taglia</label>
-              <Input value={form.size} onChange={(event) => updateForm('size', event.target.value)} className="mt-1" />
-            </div>
-            <div>
-              <label className="text-muted-foreground">Colore</label>
-              <Input value={form.color} onChange={(event) => updateForm('color', event.target.value)} className="mt-1" />
-            </div>
-            <div>
-              <label className="text-muted-foreground">Quantità</label>
-              <Input
-                type="number"
-                min="0"
-                value={form.quantity}
-                onChange={(event) => updateForm('quantity', event.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div className="flex items-end">
-              <p className="text-xs text-muted-foreground">
-                Confidenza: {(parsed.confidence * 100).toFixed(0)}%
+          <div className="rounded-lg border border-border p-3 text-sm">
+            <p><span className="font-medium">Intent:</span> {parsed.intent}</p>
+            <p><span className="font-medium">Richiede review:</span> {parsed.needs_review ? 'si' : 'no'}</p>
+            {parsed.command.warnings.length ? (
+              <p className="mt-2 text-xs text-amber-700">
+                {parsed.command.warnings.join(' - ')}
               </p>
-            </div>
+            ) : null}
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm text-muted-foreground">Categoria</label>
-            <select
-              value={form.category}
-              onChange={(event) => updateForm('category', event.target.value)}
-              className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm"
-            >
-              <option value="general">General</option>
-              <option value="scarpe">Scarpe</option>
-              <option value="abbigliamento">Abbigliamento</option>
-              <option value="accessori">Accessori</option>
-            </select>
+          <div className="space-y-2">
+            {parsed.command.items.map((item) => (
+              <div key={item.line_index} className="rounded-lg border border-border p-3 text-sm">
+                <p className="font-medium">
+                  {item.brand ?? 'Articolo'} {item.model_name ?? ''}
+                </p>
+                <p className="text-muted-foreground">
+                  Tg. {item.size ?? '-'} - Colore {item.color ?? '-'} - Qta {item.quantity_delta ?? item.quantity ?? '-'}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Confidenza item: {(item.confidence * 100).toFixed(0)}%
+                </p>
+              </div>
+            ))}
           </div>
+
+          {parsed.lookup_result ? (
+            <div className="space-y-2 rounded-lg border border-border p-3 text-sm">
+              <div className="flex items-center gap-2 font-medium">
+                <Search className="h-4 w-4" /> Risultato lookup
+              </div>
+              <p>{parsed.lookup_result.summary}</p>
+              {parsed.lookup_result.exact_matches.map((match) => (
+                <p key={match.variant_id} className="text-muted-foreground">
+                  {match.brand} {match.model_name} Tg. {match.size} {match.color}: {match.quantity}
+                </p>
+              ))}
+              {!parsed.lookup_result.exact_matches.length && parsed.lookup_result.similar_matches.map((match) => (
+                <p key={match.variant_id} className="text-muted-foreground">
+                  Simile: {match.brand} {match.model_name} Tg. {match.size} {match.color}: {match.quantity}
+                </p>
+              ))}
+            </div>
+          ) : null}
 
           {saveError ? <p className="text-sm text-destructive">{saveError}</p> : null}
 
           <div className="flex gap-2 pt-2">
-            <Button className="flex-1" onClick={handleConfirmCreate} disabled={isSaving}>
-              <Check className="h-4 w-4 mr-1" /> {isSaving ? 'Creazione...' : 'Conferma e crea'}
-            </Button>
+            {isMutationIntent ? (
+              <Button className="flex-1" onClick={handleConfirmAction} disabled={isSaving}>
+                <ClipboardCheck className="mr-1 h-4 w-4" /> {isSaving ? 'Creazione proposta...' : 'Conferma e crea proposta'}
+              </Button>
+            ) : (
+              <Button className="flex-1" variant="outline" onClick={() => router.push('/dashboard/inventory')}>
+                <Check className="mr-1 h-4 w-4" /> Apri magazzino
+              </Button>
+            )}
             <Button variant="outline" onClick={handleReset}>
               <RotateCcw className="h-4 w-4" />
             </Button>
           </div>
         </Card>
-      )}
+      ) : null}
     </div>
   );
 }
