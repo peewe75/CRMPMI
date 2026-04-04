@@ -2,10 +2,12 @@ import type { VoiceCommandItem, VoiceIntent, VoiceParseResult } from '@/types/do
 import {
   compactWhitespace,
   extractColor,
+  extractMaterial,
   extractSize,
   normalizeVoiceText,
   parseVoiceQuantityToken,
   removeColorTokens,
+  removeMaterialTokens,
   removeSizeTokens,
   splitBrandAndModel,
   stripIntentPrefix,
@@ -131,8 +133,10 @@ function buildItem(params: {
   intent: VoiceIntent;
 }): VoiceCommandItem {
   const color = extractColor(params.baseText);
+  const material = extractMaterial(params.baseText);
   const textWithoutColor = removeColorTokens(params.baseText);
-  const textWithoutSize = removeSizeTokens(textWithoutColor);
+  const textWithoutMaterial = removeMaterialTokens(textWithoutColor);
+  const textWithoutSize = removeSizeTokens(textWithoutMaterial);
   const descriptorText = compactWhitespace(
     textWithoutSize.replace(new RegExp(`^${voiceQuantityPattern()}\\s+`), '')
   );
@@ -143,6 +147,7 @@ function buildItem(params: {
     (model_name ? 0.2 : 0.1) +
     (params.size ? 0.2 : params.intent === 'product_search' ? 0.1 : 0) +
     (color ? 0.15 : 0) +
+    (material ? 0.1 : 0) +
     (params.quantity != null ? 0.2 : params.intent === 'stock_lookup' ? 0.1 : 0);
 
   return {
@@ -151,6 +156,7 @@ function buildItem(params: {
     model_name,
     size: params.size,
     color,
+    material,
     quantity: params.intent === 'inventory_adjustment' ? Math.abs(params.quantity ?? 0) || null : params.quantity,
     quantity_delta: params.intent === 'inventory_adjustment' ? params.quantity : null,
     raw_description: compactWhitespace(params.rawDescription),

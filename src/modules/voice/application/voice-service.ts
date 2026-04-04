@@ -70,6 +70,7 @@ export async function createVoiceProposalFromInterpretation(input: {
       payload: {
         brand: item.brand,
         model_name: item.model_name,
+        material: item.material,
         quantity_delta: item.quantity_delta,
         match_status: item.match_status ?? 'unmatched',
         matched_label: item.matched_label ?? null,
@@ -96,13 +97,14 @@ async function resolveVoiceLookup(parsed: VoiceParseResult): Promise<VoiceLookup
   const searchTerms = [requestedItem.brand, requestedItem.model_name].filter(Boolean).join(' ').trim();
   let query = db
     .from('product_variants')
-    .select('id, size, color, product_id, products:product_id(id, brand, model_name), stock_levels(quantity, store_id)')
+    .select('id, size, color, material, product_id, products:product_id(id, brand, model_name), stock_levels(quantity, store_id)')
     .eq('org_id', orgId)
     .eq('active', true)
     .limit(50);
 
   if (requestedItem.size) query = query.eq('size', requestedItem.size);
   if (requestedItem.color) query = query.ilike('color', `%${requestedItem.color}%`);
+  if (requestedItem.material) query = query.ilike('material', `%${requestedItem.material}%`);
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
@@ -116,6 +118,7 @@ async function resolveVoiceLookup(parsed: VoiceParseResult): Promise<VoiceLookup
       model_name: product?.model_name ?? '',
       size: variant.size,
       color: variant.color,
+      material: variant.material,
     });
 
     return {
@@ -125,11 +128,15 @@ async function resolveVoiceLookup(parsed: VoiceParseResult): Promise<VoiceLookup
       model_name: product?.model_name ?? '',
       size: variant.size,
       color: variant.color,
+      material: variant.material ?? null,
       quantity,
       similarity,
       exact:
         similarity >= 0.95 ||
-        (!!requestedItem.size && requestedItem.size === variant.size && compareText(requestedItem.color, variant.color)),
+        ((!!requestedItem.size && requestedItem.size === variant.size) ||
+          (!requestedItem.size && !variant.size)) &&
+          compareText(requestedItem.color, variant.color) &&
+          compareText(requestedItem.material, variant.material),
     } satisfies VoiceLookupMatch;
   }).filter((item) => {
     if (!searchTerms) return true;
@@ -157,7 +164,7 @@ async function enrichVoiceMutationItems(parsed: VoiceParseResult) {
   const db = createServiceClient();
   const { data, error } = await db
     .from('product_variants')
-    .select('id, size, color, product_id, products:product_id(id, brand, model_name)')
+    .select('id, size, color, material, product_id, products:product_id(id, brand, model_name)')
     .eq('org_id', orgId)
     .eq('active', true)
     .limit(200);
@@ -179,6 +186,7 @@ async function enrichVoiceMutationItems(parsed: VoiceParseResult) {
       model_name: product?.model_name ?? '',
       size: variant.size ?? '',
       color: variant.color ?? '',
+      material: variant.material ?? '',
     };
   });
 
@@ -216,6 +224,7 @@ function resolveVoiceMutationMatch(
     model_name: string;
     size: string;
     color: string;
+    material: string;
   }>
 ) {
   const ranked = candidates
@@ -266,7 +275,7 @@ function resolveVoiceMutationMatch(
 
 function scoreMutationMatch(
   item: VoiceCommandItem,
-  candidate: { brand: string; model_name: string; size: string; color: string }
+  candidate: { brand: string; model_name: string; size: string; color: string; material: string }
 ) {
   let score = 0;
 
@@ -274,6 +283,7 @@ function scoreMutationMatch(
   if (compareText(item.model_name, candidate.model_name)) score += 0.3;
   if (item.size && item.size === candidate.size) score += 0.2;
   if (item.color && compareText(item.color, candidate.color)) score += 0.15;
+  if (item.material && compareText(item.material, candidate.material)) score += 0.18;
 
   const queryText = [item.brand, item.model_name].filter(Boolean).join(' ').trim().toLowerCase();
   const candidateText = `${candidate.brand} ${candidate.model_name}`.toLowerCase();
@@ -287,22 +297,30 @@ function compactCandidateLabel(candidate: {
   model_name: string;
   size: string;
   color: string;
+  material: string;
 }) {
-  return [candidate.brand, candidate.model_name, candidate.size ? `Tg. ${candidate.size}` : null, candidate.color]
+  return [
+    candidate.brand,
+    candidate.model_name,
+    candidate.color,
+    candidate.material || null,
+    candidate.size ? `Tg. ${candidate.size}` : null,
+  ]
     .filter(Boolean)
     .join(' ');
 }
 
 function scoreLookupMatch(
   requestedItem: VoiceParseResult['command']['items'][number],
-  candidate: { brand: string; model_name: string; size: string; color: string }
+  candidate: { brand: string; model_name: string; size: string | null; color: string; material: string | null }
 ) {
   let score = 0;
   if (compareText(requestedItem.brand, candidate.brand)) score += 0.35;
   if (compareText(requestedItem.model_name, candidate.model_name)) score += 0.3;
   if (!requestedItem.model_name && candidate.model_name) score += 0.1;
-  if (requestedItem.size && requestedItem.size === candidate.size) score += 0.2;
+  if (requestedItem.size && requestedItem.size === candidate.size) score += 0.15;
   if (requestedItem.color && compareText(requestedItem.color, candidate.color)) score += 0.15;
+  if (requestedItem.material && compareText(requestedItem.material, candidate.material)) score += 0.2;
   return Math.min(1, score);
 }
 
@@ -321,7 +339,8 @@ function sortLookupMatches(a: VoiceLookupMatch, b: VoiceLookupMatch) {
 function buildExactLookupSummary(matches: VoiceLookupMatch[]) {
   const first = matches[0];
   if (matches.length === 1) {
-    return `${first.brand} ${first.model_name} Tg. ${first.size} ${first.color}: ${first.quantity} pezzi disponibili.`;
+    const detail = [first.color, first.material, first.size ? `Tg. ${first.size}` : null].filter(Boolean).join(' · ');
+    return `${first.brand} ${first.model_name} ${detail}: ${first.quantity} pezzi disponibili.`;
   }
 
   const total = matches.reduce((sum, item) => sum + item.quantity, 0);

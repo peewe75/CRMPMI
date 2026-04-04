@@ -27,6 +27,7 @@ export interface DocumentImportLineDecision {
   category?: string;
   size?: string;
   color?: string;
+  material?: string;
   cost_price?: number;
   quantity?: number;
 }
@@ -77,6 +78,7 @@ export async function createProposalFromDocument(input: {
             normalized_description: line.normalized_description,
             supplier_code: line.supplier_code,
             barcode: line.barcode,
+            material: inferMaterial(line.normalized_description || line.raw_description),
           },
         }))
       : [
@@ -92,6 +94,7 @@ export async function createProposalFromDocument(input: {
             payload: {
               capture_type: document.capture_type,
               requires_manual_review: true,
+              material: inferMaterial(document.raw_text ?? document.file_name),
             },
           },
         ],
@@ -251,6 +254,7 @@ async function buildAutomaticDecisions(
         const existingVariantForProduct = await findExistingVariantForProduct(db, orgId, knownProductId, {
           size_raw: line.size_raw,
           color_raw: line.color_raw,
+          material_raw: inferMaterial(line.normalized_description || line.raw_description),
         });
 
         if (existingVariantForProduct) {
@@ -269,6 +273,7 @@ async function buildAutomaticDecisions(
           matched_product_id: knownProductId,
           size: line.size_raw ?? undefined,
           color: line.color_raw ?? undefined,
+          material: inferMaterial(line.normalized_description || line.raw_description) ?? undefined,
           cost_price: line.unit_price ?? undefined,
           quantity: line.quantity ?? undefined,
         };
@@ -282,6 +287,7 @@ async function buildAutomaticDecisions(
         const existingVariantForProduct = await findExistingVariantForProduct(db, orgId, existingProduct.id, {
           size_raw: line.size_raw,
           color_raw: line.color_raw,
+          material_raw: inferMaterial(line.normalized_description || line.raw_description),
         });
 
         if (existingVariantForProduct) {
@@ -300,6 +306,7 @@ async function buildAutomaticDecisions(
           matched_product_id: existingProduct.id,
           size: line.size_raw ?? undefined,
           color: line.color_raw ?? undefined,
+          material: inferMaterial(line.normalized_description || line.raw_description) ?? undefined,
           cost_price: line.unit_price ?? undefined,
           quantity: line.quantity ?? undefined,
         };
@@ -314,6 +321,7 @@ async function buildAutomaticDecisions(
         category: inferCategory(modelName),
         size: line.size_raw ?? undefined,
         color: line.color_raw ?? undefined,
+        material: inferMaterial(line.normalized_description || line.raw_description) ?? undefined,
         cost_price: line.unit_price ?? undefined,
         quantity: line.quantity ?? undefined,
       };
@@ -379,6 +387,7 @@ function buildProposalItemsFromDecisions(
           matched_variant_id: decision.matched_variant_id ?? null,
           size: decision.size ?? line.size_raw,
           color: decision.color ?? line.color_raw,
+          material: decision.material ?? inferMaterial(line.normalized_description || line.raw_description),
           cost_price: decision.cost_price ?? line.unit_price,
           quantity: decision.quantity ?? line.quantity,
           barcode: line.barcode,
@@ -564,20 +573,51 @@ async function findExistingVariantForProduct(
   line: {
     size_raw: string | null;
     color_raw: string | null;
+    material_raw: string | null;
   }
 ) {
-  if (!line.size_raw || !line.color_raw) {
-    return null;
-  }
-
-  const { data } = await db
+  let query = db
     .from('product_variants')
     .select('id, product_id')
     .eq('org_id', orgId)
-    .eq('product_id', productId)
-    .eq('size', line.size_raw)
-    .eq('color', line.color_raw)
-    .maybeSingle();
+    .eq('product_id', productId);
 
-  return data;
+  if (line.color_raw?.trim()) {
+    query = query.ilike('color', line.color_raw.trim());
+  }
+
+  if (line.material_raw?.trim()) {
+    query = query.ilike('material', `%${line.material_raw.trim()}%`);
+  }
+
+  if (line.size_raw?.trim()) {
+    query = query.eq('size', line.size_raw.trim());
+  }
+
+  const { data } = await query.limit(5);
+
+  if (!Array.isArray(data) || data.length === 0) {
+    return null;
+  }
+
+  if (!line.color_raw && !line.material_raw) {
+    return data.length === 1 ? data[0] : null;
+  }
+
+  return data[0];
+}
+
+function inferMaterial(description: string | null) {
+  if (!description) return null;
+  const normalized = description.toLowerCase();
+
+  if (/\b(pelle|pelletteria)\b/i.test(normalized)) return 'Pelle';
+  if (/\b(cuoio)\b/i.test(normalized)) return 'Cuoio';
+  if (/\b(tessuto|canvas)\b/i.test(normalized)) return 'Tessuto';
+  if (/\b(camoscio|suede)\b/i.test(normalized)) return 'Camoscio';
+  if (/\b(rafia)\b/i.test(normalized)) return 'Rafia';
+  if (/\b(nylon)\b/i.test(normalized)) return 'Nylon';
+  if (/\b(vernice)\b/i.test(normalized)) return 'Vernice';
+
+  return null;
 }

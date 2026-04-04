@@ -28,6 +28,19 @@ const COLOR_SYNONYMS: Record<string, string> = {
   grigie: 'Grigio',
 };
 
+const MATERIAL_SYNONYMS: Record<string, string> = {
+  pelle: 'Pelle',
+  pellegrana: 'Pelle',
+  cuoio: 'Cuoio',
+  tessuto: 'Tessuto',
+  canvas: 'Tessuto',
+  camoscio: 'Camoscio',
+  suede: 'Camoscio',
+  nylon: 'Nylon',
+  rafia: 'Rafia',
+  vernice: 'Vernice',
+};
+
 const NUMBER_WORDS: Record<string, number> = {
   zero: 0,
   uno: 1,
@@ -72,8 +85,20 @@ export function extractColor(text: string) {
   return null;
 }
 
+export function extractMaterial(text: string) {
+  const tokens = tokenizeVoiceText(text);
+  for (const token of tokens) {
+    if (MATERIAL_SYNONYMS[token]) return MATERIAL_SYNONYMS[token];
+  }
+  return null;
+}
+
 export function removeColorTokens(text: string) {
   return tokenizeVoiceText(text).filter((token) => !COLOR_SYNONYMS[token]).join(' ').trim();
+}
+
+export function removeMaterialTokens(text: string) {
+  return tokenizeVoiceText(text).filter((token) => !MATERIAL_SYNONYMS[token]).join(' ').trim();
 }
 
 export function extractSize(text: string) {

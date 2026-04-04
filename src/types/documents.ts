@@ -24,6 +24,7 @@ export interface ParsedDocumentLineItem {
   barcode: string | null;
   size_raw: string | null;
   color_raw: string | null;
+  material_raw?: string | null;
   quantity: number | null;
   unit_price: number | null;
   line_total: number | null;
@@ -96,6 +97,7 @@ export interface VoiceCommandItem {
   model_name: string | null;
   size: string | null;
   color: string | null;
+  material: string | null;
   quantity: number | null;
   quantity_delta: number | null;
   raw_description: string;
