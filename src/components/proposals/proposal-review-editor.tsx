@@ -28,6 +28,7 @@ type EditableProposalItem = InventoryProposalItem & {
   candidates: VariantCandidate[];
   searchLoading: boolean;
   saving: boolean;
+  savingCandidateId: string | null;
   error: string | null;
 };
 
@@ -49,6 +50,7 @@ export function ProposalReviewEditor({
       candidates: [],
       searchLoading: false,
       saving: false,
+      savingCandidateId: null,
       error: null,
     }))
   );
@@ -142,10 +144,17 @@ export function ProposalReviewEditor({
     }
   }
 
-  async function saveItem(itemId: string, payload: Record<string, unknown>) {
+  async function saveItem(itemId: string, payload: Record<string, unknown>, options?: { savingCandidateId?: string | null }) {
     setEditableItems((current) =>
       current.map((candidate) =>
-        candidate.id === itemId ? { ...candidate, saving: true, error: null } : candidate
+        candidate.id === itemId
+          ? {
+              ...candidate,
+              saving: true,
+              savingCandidateId: options?.savingCandidateId ?? null,
+              error: null,
+            }
+          : candidate
       )
     );
 
@@ -175,6 +184,7 @@ export function ProposalReviewEditor({
                 candidates: candidate.candidates,
                 searchQuery: candidate.searchQuery,
                 searchLoading: false,
+                savingCandidateId: null,
               }
             : candidate
         )
@@ -190,6 +200,7 @@ export function ProposalReviewEditor({
             ? {
                 ...candidate,
                 saving: false,
+                savingCandidateId: null,
                 error: error instanceof Error ? error.message : 'Aggiornamento non riuscito',
               }
             : candidate
@@ -393,7 +404,11 @@ export function ProposalReviewEditor({
                   {item.candidates.map((candidate) => (
                     <li
                       key={candidate.id}
-                      className="flex flex-col gap-2 rounded-lg border border-border bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                      className={`flex flex-col gap-2 rounded-lg border p-3 transition-colors sm:flex-row sm:items-center sm:justify-between ${
+                        item.matched_variant_id === candidate.id
+                          ? 'border-emerald-300 bg-emerald-50'
+                          : 'border-border bg-white'
+                      }`}
                     >
                       <div className="min-w-0">
                         <p className="text-sm font-medium">
@@ -413,11 +428,20 @@ export function ProposalReviewEditor({
                             quantity: item.quantity,
                             size_raw: candidate.size,
                             color_raw: candidate.color,
-                          })
+                          }, { savingCandidateId: candidate.id })
                         }
                         disabled={item.saving}
+                        className={
+                          item.matched_variant_id === candidate.id
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            : undefined
+                        }
                       >
-                        {item.saving ? 'Salvo...' : 'Usa questa'}
+                        {item.saving && item.savingCandidateId === candidate.id
+                          ? 'Seleziono...'
+                          : item.matched_variant_id === candidate.id
+                            ? 'Selezionata'
+                            : 'Usa questa'}
                       </Button>
                     </li>
                   ))}
