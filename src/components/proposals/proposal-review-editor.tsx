@@ -470,11 +470,14 @@ export function ProposalReviewEditor({
 
 function buildInitialSearchQuery(item: InventoryProposalItem) {
   const payload = (item.payload ?? {}) as Record<string, unknown>;
-  const parts = [
-    typeof payload.brand === 'string' ? payload.brand : null,
-    typeof payload.model_name === 'string' ? payload.model_name : null,
-    item.raw_description,
-  ].filter(Boolean);
+  const brand = typeof payload.brand === 'string' ? payload.brand : null;
+  const modelName = typeof payload.model_name === 'string' ? payload.model_name : null;
+
+  const parts = [brand, modelName].filter(Boolean);
+
+  if (parts.length === 0 && item.raw_description) {
+    parts.push(item.raw_description);
+  }
 
   return parts.join(' ').trim();
 }

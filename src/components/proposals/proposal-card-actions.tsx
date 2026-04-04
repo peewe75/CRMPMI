@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -44,8 +45,8 @@ export function ProposalCardActions({
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {status === 'pending_review' ? (
-          <Button size="sm" disabled={isPending} onClick={() => runAction('approve')}>
-            Approva
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/dashboard/proposals/${proposalId}`}>Apri review</Link>
           </Button>
         ) : null}
         {status === 'approved' ? (
