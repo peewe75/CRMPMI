@@ -6,6 +6,7 @@ import { Sparkles, PackagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 const CATEGORIES = ['general', 'scarpe', 'abbigliamento', 'accessori', 'borse'] as const;
 
@@ -89,17 +90,14 @@ function QuickAddPageContent() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Categoria</label>
-              <select
+              <Select
                 value={category}
                 onChange={(event) => setCategory(event.target.value)}
-                className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm"
-              >
-                {CATEGORIES.map((item) => (
-                  <option key={item} value={item}>
-                    {item.charAt(0).toUpperCase() + item.slice(1)}
-                  </option>
-                ))}
-              </select>
+                options={CATEGORIES.map((item) => ({
+                  value: item,
+                  label: item.charAt(0).toUpperCase() + item.slice(1),
+                }))}
+              />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Fornitore</label>

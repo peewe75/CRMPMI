@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import type { UserRole } from '@/types/database';
 import type {
   OrganizationTeamInvitation,
@@ -211,17 +212,12 @@ export function TeamManagement({
               placeholder="email@negozio.it"
               required
             />
-            <select
+            <Select
               value={inviteRole}
               onChange={(event) => setInviteRole(event.target.value as UserRole)}
-              className="h-10 rounded-lg border border-border bg-white px-3 text-sm"
-            >
-              {APP_ROLE_OPTIONS.map((role) => (
-                <option key={role} value={role}>
-                  {APP_ROLE_LABELS[role]}
-                </option>
-              ))}
-            </select>
+              options={APP_ROLE_OPTIONS.map((role) => ({ value: role, label: APP_ROLE_LABELS[role] }))}
+              className="sm:w-36"
+            />
             <Button type="submit" disabled={busyKey === 'invite' || isRefreshing}>
               {busyKey === 'invite' ? <Loader2 className="h-4 w-4 animate-spin" /> : <MailPlus className="h-4 w-4" />}
               Invia invito
@@ -267,7 +263,7 @@ export function TeamManagement({
 
                     {canManage && !isSelf ? (
                       <div className="flex flex-col gap-2 sm:min-w-64">
-                        <select
+                        <Select
                           value={roleDrafts[member.userId] ?? member.appRole}
                           onChange={(event) =>
                             setRoleDrafts((current) => ({
@@ -275,14 +271,8 @@ export function TeamManagement({
                               [member.userId]: event.target.value as UserRole,
                             }))
                           }
-                          className="h-10 rounded-lg border border-border bg-white px-3 text-sm"
-                        >
-                          {APP_ROLE_OPTIONS.map((role) => (
-                            <option key={role} value={role}>
-                              {APP_ROLE_LABELS[role]}
-                            </option>
-                          ))}
-                        </select>
+                          options={APP_ROLE_OPTIONS.map((role) => ({ value: role, label: APP_ROLE_LABELS[role] }))}
+                        />
                         <div className="flex gap-2">
                           <Button
                             size="sm"

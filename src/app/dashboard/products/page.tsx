@@ -4,6 +4,7 @@ import { listProducts } from '@/modules/products/application/products-service';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ProductSearch } from '@/components/products/product-search';
+import { EmptyState } from '@/components/ui/empty-state';
 import { getVariantGroupKey } from '@/modules/products/domain/variant-display';
 
 export default async function ProductsPage({
@@ -25,7 +26,7 @@ export default async function ProductsPage({
   });
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">Prodotti</h1>
         <Button asChild size="sm">
@@ -39,13 +40,12 @@ export default async function ProductsPage({
       <ProductSearch />
 
       {products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Search className="h-12 w-12 text-muted-foreground mb-3" />
-          <p className="text-muted-foreground">Nessun prodotto trovato</p>
-          <Button asChild variant="outline" className="mt-4">
-            <Link href="/dashboard/products/new">Crea il primo prodotto</Link>
-          </Button>
-        </div>
+        <EmptyState
+          icon={Search}
+          title="Nessun prodotto trovato"
+          actionLabel="Crea il primo prodotto"
+          actionHref="/dashboard/products/new"
+        />
       ) : (
         <ul className="space-y-2">
           {products.map((product) => (

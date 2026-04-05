@@ -1,16 +1,18 @@
 'use client';
 
 import { OrganizationSwitcher, UserButton } from '@clerk/nextjs';
+import { ThemeToggle } from '@/components/layout/theme-toggle';
 
 export function TopBar() {
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-white px-4">
+    <header className="flex h-14 items-center justify-between border-b border-border bg-white px-4 dark:bg-slate-900">
       <div className="md:hidden text-lg font-bold text-primary">
         CRM Negozi
       </div>
       <div className="hidden md:block" />
 
       <div className="flex items-center gap-3">
+        <ThemeToggle />
         <OrganizationSwitcher
           hidePersonal
           afterCreateOrganizationUrl="/dashboard"

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import type { Product } from '@/types/database';
 
@@ -66,28 +67,23 @@ export function ProductForm({ product, onSubmit }: ProductFormProps) {
 
         <div>
           <label className="mb-1 block text-sm font-medium">Categoria *</label>
-          <select
+          <Select
             name="category"
             defaultValue={product?.category ?? 'general'}
-            className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm"
-          >
-            {CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
-            ))}
-          </select>
+            options={CATEGORIES.map((cat) => ({
+              value: cat,
+              label: cat.charAt(0).toUpperCase() + cat.slice(1),
+            }))}
+          />
         </div>
 
         <div>
           <label className="mb-1 block text-sm font-medium">Genere</label>
-          <select
+          <Select
             name="gender"
             defaultValue={product?.gender ?? ''}
-            className="flex h-10 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm"
-          >
-            {GENDERS.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
+            options={GENDERS.map(({ value, label }) => ({ value, label }))}
+          />
         </div>
 
         <div>

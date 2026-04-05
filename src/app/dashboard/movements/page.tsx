@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import { ArrowRightLeft } from 'lucide-react';
 import { listMovements } from '@/modules/inventory/application/inventory-service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { getVariantCommercialLabel, getVariantSizeLabel } from '@/modules/products/domain/variant-display';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -50,7 +52,11 @@ export default async function MovementsPage({
       </div>
 
       {movements.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nessun movimento registrato.</p>
+        <EmptyState
+          icon={ArrowRightLeft}
+          title="Nessun movimento registrato"
+          description="I movimenti di carico, scarico e rettifica appariranno qui."
+        />
       ) : (
         <ul className="space-y-2">
           {movements.map((movement) => {

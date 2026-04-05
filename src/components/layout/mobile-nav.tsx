@@ -15,7 +15,7 @@ export function MobileNav({
   const visibleItems = getVisibleMobileNavItems(featureFlags);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white pb-safe md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-white pb-safe md:hidden dark:bg-slate-900">
       <div className="flex items-center justify-around">
         {visibleItems.map(({ href, label, icon: Icon }) => {
           const isActive =

@@ -7,6 +7,7 @@ import { FileUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 
 export default function DocumentUploadPage() {
   const router = useRouter();
@@ -65,15 +66,15 @@ export default function DocumentUploadPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium">Tipo documento</label>
-            <select
+            <Select
               value={documentType}
               onChange={(event) => setDocumentType(event.target.value as 'invoice' | 'ddt' | 'unknown')}
-              className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm"
-            >
-              <option value="unknown">Non specificato</option>
-              <option value="invoice">Fattura</option>
-              <option value="ddt">DDT</option>
-            </select>
+              options={[
+                { value: 'unknown', label: 'Non specificato' },
+                { value: 'invoice', label: 'Fattura' },
+                { value: 'ddt', label: 'DDT' },
+              ]}
+            />
           </div>
 
           <div>
@@ -88,17 +89,17 @@ export default function DocumentUploadPage() {
 
           <div>
             <label className="mb-1 block text-sm font-medium">Tipo acquisizione</label>
-            <select
+            <Select
               value={captureType}
               onChange={(event) => setCaptureType(event.target.value as 'pdf_document' | 'printed_document_photo' | 'handwritten_note' | 'mixed_document' | 'unknown')}
-              className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm"
-            >
-              <option value="unknown">Non specificato</option>
-              <option value="pdf_document">PDF / documento digitale</option>
-              <option value="printed_document_photo">Foto documento stampato</option>
-              <option value="handwritten_note">Foto foglio scritto a mano</option>
-              <option value="mixed_document">Foto documento misto</option>
-            </select>
+              options={[
+                { value: 'unknown', label: 'Non specificato' },
+                { value: 'pdf_document', label: 'PDF / documento digitale' },
+                { value: 'printed_document_photo', label: 'Foto documento stampato' },
+                { value: 'handwritten_note', label: 'Foto foglio scritto a mano' },
+                { value: 'mixed_document', label: 'Foto documento misto' },
+              ]}
+            />
             <p className="mt-1 text-xs text-muted-foreground">
               Le foto documento e i fogli scritti a mano entrano sempre in review prima di qualsiasi proposta di magazzino.
             </p>

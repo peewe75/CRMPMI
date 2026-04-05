@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getCurrentOrganizationFeatureFlags } from '@/lib/auth/feature-flags';
 import { Card } from '@/components/ui/card';
+import { DashboardKPIs } from '@/components/dashboard/dashboard-kpis';
 import {
   getVisibleDashboardQuickActions,
   getVisibleDashboardSections,
@@ -13,6 +14,8 @@ export default async function DashboardHome() {
 
   return (
     <div className="space-y-6 p-4">
+      <DashboardKPIs />
+
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Azioni rapide

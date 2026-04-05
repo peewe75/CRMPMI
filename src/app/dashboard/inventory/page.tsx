@@ -1,8 +1,10 @@
 import Link from 'next/link';
+import { Package } from 'lucide-react';
 import { getStockLevels, listStores } from '@/modules/inventory/application/inventory-service';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   getVariantCommercialLabel,
   getVariantGroupKey,
@@ -50,9 +52,11 @@ export default async function InventoryPage({
       </div>
 
       {stores.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Nessun punto vendita configurato. Verra creato automaticamente al primo movimento.
-        </p>
+        <EmptyState
+          icon={Package}
+          title="Nessun punto vendita configurato"
+          description="Verrà creato automaticamente al primo movimento."
+        />
       ) : (
         stores.map((store) => {
           const storeStock = stockData.filter((item) => item.store_id === store.id);
@@ -69,7 +73,7 @@ export default async function InventoryPage({
                 <h2 className="font-semibold">{store.name}</h2>
                 <div className="flex gap-2">
                   <Badge variant="outline">{Object.keys(groupedStock).length} varianti</Badge>
-                  <Badge variant="outline">{totalUnits} unita</Badge>
+                  <Badge variant="outline">{totalUnits} unità</Badge>
                 </div>
               </div>
 

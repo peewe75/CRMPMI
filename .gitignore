@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local/tool-generated
+.claude/
+.temp/
+output/
+new/
+new.zip
+Stitch/
+CODEX_PLAN_*.md
+SILHOUETTE_APP_OVERVIEW.md

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist } from 'next/font/google';
 import { hasClerkFrontendConfig } from '@/lib/auth/clerk-config';
+import { Providers } from '@/components/providers';
 import './globals.css';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist' });
@@ -32,7 +33,7 @@ export default async function RootLayout({
   const appShell = (
     <html lang="it" className={`${geist.variable} h-full`}>
       <body className="min-h-full bg-gray-50 font-sans antialiased">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

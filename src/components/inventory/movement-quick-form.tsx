@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { ArrowDown, ArrowUp, Loader2, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { useToast } from '@/components/ui/toast';
 
 type MovementType = 'inbound' | 'outbound' | 'adjustment';
 
@@ -24,11 +26,11 @@ export function MovementQuickForm({
   compact?: boolean;
 }) {
   const router = useRouter();
+  const { addToast } = useToast();
   const [movementType, setMovementType] = useState<MovementType>('inbound');
   const [quantity, setQuantity] = useState('1');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function getIcon() {
@@ -40,7 +42,6 @@ export function MovementQuickForm({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setMessage(null);
 
     startTransition(async () => {
       try {
@@ -65,10 +66,12 @@ export function MovementQuickForm({
 
         setQuantity('1');
         setNotes('');
-        setMessage('Movimento registrato con successo.');
+        addToast({ type: 'success', title: 'Movimento registrato' });
         router.refresh();
       } catch (submitError) {
-        setError(submitError instanceof Error ? submitError.message : 'Registrazione movimento non riuscita');
+        const msg = submitError instanceof Error ? submitError.message : 'Registrazione movimento non riuscita';
+        setError(msg);
+        addToast({ type: 'error', title: 'Errore', description: msg });
       }
     });
   }
@@ -76,24 +79,19 @@ export function MovementQuickForm({
   return (
     <form onSubmit={handleSubmit} className={compact ? 'space-y-3' : 'space-y-4'}>
       <div className={compact ? 'grid gap-3' : 'grid gap-3 md:grid-cols-[180px_120px_minmax(0,1fr)]'}>
-        <select
+        <Select
           value={movementType}
           onChange={(event) => setMovementType(event.target.value as MovementType)}
-          className="h-10 rounded-lg border border-border bg-white px-3 text-sm"
-        >
-          {MOVEMENT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          options={MOVEMENT_OPTIONS}
+          className="md:w-[180px]"
+        />
         <Input
           type="number"
           min="0.01"
           step="0.01"
           value={quantity}
           onChange={(event) => setQuantity(event.target.value)}
-          placeholder="Quantita"
+          placeholder="Quantità"
         />
         <Input
           value={notes}
@@ -107,8 +105,7 @@ export function MovementQuickForm({
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : getIcon()}
           Registra movimento
         </Button>
-        {message ? <p className="text-sm text-green-700">{message}</p> : null}
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
     </form>
   );

@@ -15,7 +15,7 @@ export function DesktopSidebar({
   const visibleItems = getVisibleSidebarItems(featureFlags);
 
   return (
-    <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-border md:bg-white">
+    <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-border md:bg-white md:dark:bg-slate-900">
       <div className="flex h-14 items-center border-b border-border px-4">
         <Link href="/dashboard" className="text-lg font-bold text-primary">
           CRM Negozi
@@ -47,7 +47,7 @@ export function DesktopSidebar({
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
                     isActive
                       ? 'bg-accent/10 font-medium text-accent'
-                      : 'text-gray-700 hover:bg-gray-100'
+                       : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-slate-800'
                   )}
                 >
                   <navItem.icon className="h-4 w-4" />

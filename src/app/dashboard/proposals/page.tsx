@@ -1,8 +1,29 @@
 import Link from 'next/link';
+import { Inbox } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ProposalCardActions } from '@/components/proposals/proposal-card-actions';
+import { EmptyState } from '@/components/ui/empty-state';
 import { listProposals } from '@/modules/proposals/application/proposals-service';
+
+const PROPOSAL_STATUS_LABELS: Record<string, string> = {
+  pending_review: 'In revisione',
+  approved: 'Approvata',
+  rejected: 'Rifiutata',
+  applied: 'Applicata',
+};
+
+const PROPOSAL_TYPE_LABELS: Record<string, string> = {
+  inbound: 'Carico',
+  outbound: 'Scarico',
+  adjustment: 'Rettifica',
+};
+
+const PROPOSAL_SOURCE_LABELS: Record<string, string> = {
+  voice: 'Voce',
+  document: 'Documento',
+  manual: 'Manuale',
+};
 
 export default async function ProposalsPage() {
   const { proposals } = await listProposals({ limit: 50 });
@@ -17,9 +38,11 @@ export default async function ProposalsPage() {
       </div>
 
       {proposals.length === 0 ? (
-        <Card className="p-4 text-sm text-muted-foreground">
-          Nessuna proposta presente.
-        </Card>
+        <EmptyState
+          icon={Inbox}
+          title="Nessuna proposta presente"
+          description="Le proposte create da input vocale, documenti o manualmente appariranno qui per la revisione."
+        />
       ) : (
         <ul className="space-y-2">
           {proposals.map((proposal) => (
@@ -29,7 +52,7 @@ export default async function ProposalsPage() {
                   <div>
                     <p className="text-sm font-semibold">
                       <Link href={`/dashboard/proposals/${proposal.id}`} className="underline underline-offset-2">
-                        {proposal.proposal_type} da {proposal.source_type}
+                        {PROPOSAL_TYPE_LABELS[proposal.proposal_type] ?? proposal.proposal_type} da {PROPOSAL_SOURCE_LABELS[proposal.source_type] ?? proposal.source_type}
                       </Link>
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -37,7 +60,7 @@ export default async function ProposalsPage() {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Badge variant="outline">{proposal.status}</Badge>
+                    <Badge variant="outline">{PROPOSAL_STATUS_LABELS[proposal.status] ?? proposal.status}</Badge>
                     <Badge variant="outline">{proposal.confidence != null ? `${Math.round(proposal.confidence * 100)}%` : 'n/d'}</Badge>
                   </div>
                 </div>

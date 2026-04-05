@@ -1,5 +1,6 @@
 import {
   ArrowRightLeft,
+  Bot,
   FileText,
   Home,
   Layers,
@@ -65,6 +66,13 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
     icon: FileText,
     feature: 'document_import',
   },
+  {
+    type: 'link',
+    href: '/dashboard/assistant',
+    label: 'Assistente',
+    icon: Bot,
+    feature: 'voice_input',
+  },
   { type: 'separator', label: 'Strumenti' },
   {
     type: 'link',
@@ -88,7 +96,7 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
 export const MOBILE_NAV_ITEMS: MobileNavItem[] = [
   { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/dashboard/products', label: 'Prodotti', icon: Package },
-  { href: '/dashboard/scan', label: 'Scan', icon: ScanBarcode, feature: 'barcode_scan' },
+  { href: '/dashboard/assistant', label: 'AI', icon: Bot, feature: 'voice_input' },
   { href: '/dashboard/documents', label: 'Documenti', icon: FileText, feature: 'document_import' },
   { href: '/dashboard/more', label: 'Altro', icon: Menu },
 ];
@@ -97,6 +105,7 @@ export const DASHBOARD_QUICK_ACTIONS: QuickActionItem[] = [
   { href: '/dashboard/scan', label: 'Scansiona', icon: ScanBarcode, color: 'bg-blue-500', feature: 'barcode_scan' },
   { href: '/dashboard/quick-add', label: 'Quick Add', icon: Plus, color: 'bg-green-500' },
   { href: '/dashboard/voice', label: 'Voce', icon: Mic, color: 'bg-purple-500', feature: 'voice_input' },
+  { href: '/dashboard/assistant', label: 'Assistente', icon: Bot, color: 'bg-cyan-500', feature: 'voice_input' },
   {
     href: '/dashboard/documents/upload',
     label: 'Carica Doc',
@@ -122,6 +131,7 @@ export const DASHBOARD_SECTIONS: DashboardSectionItem[] = [
 export const MORE_PAGE_LINKS: BaseNavigationItem[] = [
   { href: '/dashboard/quick-add', label: 'Quick add' },
   { href: '/dashboard/voice', label: 'Input vocale', feature: 'voice_input' },
+  { href: '/dashboard/assistant', label: 'Assistente AI', feature: 'voice_input' },
   { href: '/dashboard/movements', label: 'Movimenti' },
   { href: '/dashboard/proposals', label: 'Proposte' },
   { href: '/dashboard/variants', label: 'Varianti' },
