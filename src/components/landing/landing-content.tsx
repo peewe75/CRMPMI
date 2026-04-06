@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import { 
   Mic, 
   Package, 
@@ -17,6 +19,26 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 export default function LandingContent() {
+  const [platform, setPlatform] = useState<'android' | 'ios' | 'huawei' | 'desktop'>('desktop');
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const ua = navigator.userAgent.toLowerCase();
+      let newPlatform: 'android' | 'ios' | 'huawei' | 'desktop' = 'desktop';
+      if (ua.includes('huawei') || ua.includes('harmonyos') || ua.includes('appgallery')) {
+        newPlatform = 'huawei';
+      } else if (/android/i.test(ua)) {
+        newPlatform = 'android';
+      } else if (/ipad|iphone|ipod/.test(ua)) {
+        newPlatform = 'ios';
+      }
+      setPlatform(newPlatform);
+      setIsClient(true);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="mesh-bg relative min-h-screen overflow-x-hidden font-sans text-slate-900 selection:bg-blue-500/30 dark:text-slate-100">
       <div className="noise-overlay" />
@@ -82,9 +104,11 @@ export default function LandingContent() {
             <div className="relative">
               <div className="absolute -inset-4 bg-gradient-to-tr from-blue-500/20 to-indigo-500/20 rounded-[40px] blur-3xl" />
               <div className="glass relative overflow-hidden rounded-[32px] border-white/40 shadow-2xl transition-transform hover:scale-[1.02] duration-700">
-                <img 
+                <Image 
                   src="/silhouette-hero.png" 
                   alt="Silhouette Dashboard" 
+                  width={1000}
+                  height={800}
                   className="w-full h-auto object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent" />
@@ -284,15 +308,42 @@ export default function LandingContent() {
               Porta il tuo negozio nel futuro oggi stesso. Silhouette è il partner che stavi cercando per governare il tuo magazzino con eleganza.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link 
-                href="/sign-up" 
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-10 py-5 font-bold text-white shadow-2xl hover:bg-black transition-all hover:-translate-y-1 dark:bg-blue-600 dark:hover:bg-blue-700"
-              >
-                Inizia ora gratuito <ArrowRight size={20} />
-              </Link>
-              <button className="glass inline-flex items-center justify-center gap-2 rounded-2xl px-10 py-5 font-bold border-white/60 hover:bg-white/40 transition-all">
-                Richiedi Demo
-              </button>
+              {isClient && platform === 'android' ? (
+                <Link 
+                  href="/android-download" 
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-10 py-5 font-bold text-white shadow-2xl hover:bg-blue-700 transition-all hover:-translate-y-1"
+                >
+                  <ArrowRight size={20} />
+                  Scarica per Android
+                </Link>
+              ) : isClient && platform === 'ios' ? (
+                <button 
+                  disabled
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-800 px-10 py-5 font-bold text-white/50 shadow-2xl cursor-not-allowed"
+                >
+                  Prossimamente su App Store
+                </button>
+              ) : isClient && platform === 'huawei' ? (
+                <button 
+                  disabled
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-600/50 px-10 py-5 font-bold text-white/50 shadow-2xl cursor-not-allowed"
+                >
+                  Prossimamente su AppGallery
+                </button>
+              ) : (
+                <Link 
+                  href="/sign-up" 
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-10 py-5 font-bold text-white shadow-2xl hover:bg-black transition-all hover:-translate-y-1 dark:bg-blue-600 dark:hover:bg-blue-700"
+                >
+                  Inizia ora gratuito <ArrowRight size={20} />
+                </Link>
+              )}
+
+              {(!isClient || platform === 'desktop') && (
+                <button className="glass inline-flex items-center justify-center gap-2 rounded-2xl px-10 py-5 font-bold border-white/60 hover:bg-white/40 transition-all">
+                  Richiedi Demo
+                </button>
+              )}
             </div>
             <p className="text-xs text-slate-400 mt-8">Nessuna carta di credito richiesta. Setup in 2 minuti.</p>
           </div>
