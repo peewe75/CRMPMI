@@ -3,14 +3,11 @@ import { hasClerkFrontendConfig } from '@/lib/auth/clerk-config';
 export default async function SignUpPage() {
   if (!hasClerkFrontendConfig()) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-        <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-6 text-center shadow-sm">
-          <h1 className="text-xl font-semibold text-gray-900">Registrazione non disponibile</h1>
-          <p className="mt-3 text-sm text-gray-600">
-            Questo deployment non ha ancora la configurazione Clerk necessaria
-            per mostrare il form di registrazione.
-          </p>
-        </div>
+      <div className="w-full rounded-3xl border border-amber-200/50 bg-white/80 p-8 text-center shadow-xl backdrop-blur-sm dark:bg-slate-900/80 dark:border-amber-900/50">
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white">Registrazione non configurata</h1>
+        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+          Questo progetto non ha la configurazione di Clerk per mostrare la registrazione.
+        </p>
       </div>
     );
   }
@@ -18,11 +15,16 @@ export default async function SignUpPage() {
   const { SignUp } = await import('@clerk/nextjs');
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+    <div className="flex w-full justify-center">
       <SignUp
         appearance={{
-          elements: { rootBox: 'w-full max-w-md' },
+          elements: { 
+            card: 'rounded-3xl shadow-2xl border-slate-200/50 dark:border-slate-800/50',
+            rootBox: 'w-full',
+          },
         }}
+        routing="path" 
+        path="/sign-up"
       />
     </div>
   );

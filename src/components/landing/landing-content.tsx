@@ -13,7 +13,10 @@ import {
   Gauge,
   Layers,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  X,
+  Share,
+  MoreVertical
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -21,6 +24,7 @@ import Link from 'next/link';
 export default function LandingContent() {
   const [platform, setPlatform] = useState<'android' | 'ios' | 'huawei' | 'desktop'>('desktop');
   const [isClient, setIsClient] = useState(false);
+  const [showPwaModal, setShowPwaModal] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -44,7 +48,7 @@ export default function LandingContent() {
       <div className="noise-overlay" />
       
       {/* Navigation */}
-      <nav className="glass sticky top-0 z-50 border-b border-white/20 px-6 py-4 dark:border-slate-800">
+      <nav className="glass fixed top-0 left-0 w-full z-50 border-b border-white/20 px-6 py-4 dark:border-slate-800 transition-all duration-300">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-2 group cursor-pointer">
             <div className="relative h-8 w-8 overflow-hidden rounded-lg bg-blue-600 shadow-lg shadow-blue-500/50 transition-transform group-hover:scale-110">
@@ -149,8 +153,8 @@ export default function LandingContent() {
                 },
                 { 
                   icon: <ShoppingCart className="text-indigo-500" />, 
-                  title: "Proposte d&apos;Ordine", 
-                  desc: "Sistema intelligente che genera ordini basandosi sull&apos;andamento vendite." 
+                  title: "Proposte d'Ordine", 
+                  desc: "Sistema intelligente che genera ordini basandosi sull'andamento vendite." 
                 },
                 { 
                   icon: <Zap className="text-amber-500" />, 
@@ -255,7 +259,7 @@ export default function LandingContent() {
                     { 
                       icon: <Target className="text-emerald-400" />, 
                       title: "Precisione Chirurgica", 
-                      desc: "Riduzione drastica degli errori di magazzino grazie all&apos;assistente IA." 
+                      desc: "Riduzione drastica degli errori di magazzino grazie all'assistente IA." 
                     },
                     { 
                       icon: <Layers className="text-purple-400" />, 
@@ -307,21 +311,31 @@ export default function LandingContent() {
             <p className="text-lg text-slate-600 dark:text-slate-400 mb-10 max-w-xl mx-auto">
               Porta il tuo negozio nel futuro oggi stesso. Silhouette è il partner che stavi cercando per governare il tuo magazzino con eleganza.
             </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
               {isClient && platform === 'android' ? (
-                <Link 
-                  href="/android-download" 
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-10 py-5 font-bold text-white shadow-2xl hover:bg-blue-700 transition-all hover:-translate-y-1"
-                >
-                  <ArrowRight size={20} />
-                  Scarica per Android
-                </Link>
+                <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+                  <button 
+                    onClick={() => setShowPwaModal(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-10 py-5 font-bold text-white shadow-2xl hover:bg-blue-700 transition-all hover:-translate-y-1"
+                  >
+                    <Sparkles size={20} />
+                    Aggiungi alla Home
+                  </button>
+                  <a 
+                    href="/downloads/silhouette-dev.apk" 
+                    download="silhouette-dev.apk"
+                    className="glass inline-flex items-center justify-center gap-2 rounded-2xl px-10 py-5 font-bold border-white/60 hover:bg-white/40 transition-all hover:-translate-y-1"
+                  >
+                    Scarica .APK
+                  </a>
+                </div>
               ) : isClient && platform === 'ios' ? (
                 <button 
-                  disabled
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-800 px-10 py-5 font-bold text-white/50 shadow-2xl cursor-not-allowed"
+                  onClick={() => setShowPwaModal(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-10 py-5 font-bold text-white shadow-2xl hover:bg-blue-700 transition-all hover:-translate-y-1"
                 >
-                  Prossimamente su App Store
+                  <Sparkles size={20} />
+                  Aggiungi alla Home (iOS)
                 </button>
               ) : isClient && platform === 'huawei' ? (
                 <button 
@@ -365,6 +379,61 @@ export default function LandingContent() {
           <p className="text-xs text-slate-400">© 2026 Silhouette CRM. Made with Opencode Aesthetic.</p>
         </div>
       </footer>
+
+      {/* PWA Install Modal */}
+      {showPwaModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-md rounded-[32px] bg-white p-8 text-center shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setShowPwaModal(false)}
+              aria-label="Chiudi"
+              className="absolute right-6 top-6 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              <X size={24} />
+            </button>
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30">
+              <Sparkles size={32} />
+            </div>
+            <h3 className="mb-2 text-2xl font-black">Aggiungi alla Home</h3>
+            <p className="mb-8 text-slate-500 dark:text-slate-400">
+              Usa Silhouette come un&apos;app nativa: schermo intero, prestazioni migliori e accesso immediato.
+            </p>
+            {platform === 'ios' ? (
+              <div className="space-y-4 text-left">
+                <div className="flex gap-4 items-center bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
+                  <Share className="text-blue-500" size={24} />
+                  <p className="text-sm font-medium">1. Tocca l&apos;icona Condividi in basso nel browser</p>
+                </div>
+                <div className="flex gap-4 items-center bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
+                  <div className="h-6 w-6 rounded-md border-2 border-slate-400 flex items-center justify-center shrink-0">
+                    <div className="h-3 w-3 bg-slate-400 rounded-sm" />
+                  </div>
+                  <p className="text-sm font-medium">2. Scegli &quot;Aggiungi alla schermata Home&quot;</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 text-left">
+                <div className="flex gap-4 items-center bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
+                  <MoreVertical className="text-blue-500" size={24} />
+                  <p className="text-sm font-medium">1. Tocca i tre puntini in alto a destra</p>
+                </div>
+                <div className="flex gap-4 items-center bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl">
+                  <div className="h-6 w-6 rounded-md border-2 border-slate-400 flex items-center justify-center shrink-0">
+                    <div className="h-3 w-3 bg-slate-400 rounded-sm" />
+                  </div>
+                  <p className="text-sm font-medium">2. Scegli &quot;Aggiungi a schermata Home&quot;</p>
+                </div>
+              </div>
+            )}
+            <button 
+              onClick={() => setShowPwaModal(false)}
+              className="mt-8 w-full rounded-2xl bg-slate-900 py-4 font-bold text-white hover:bg-black transition-colors dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+            >
+              Ho capito
+            </button>
+          </div>
+        </div>
+      )}
 
       <style jsx global>{`
         html {
