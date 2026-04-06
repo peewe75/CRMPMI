@@ -16,7 +16,9 @@ import {
   ChevronRight,
   X,
   Share,
-  MoreVertical
+  MoreVertical,
+  Menu,
+  Download
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -25,6 +27,7 @@ export default function LandingContent() {
   const [platform, setPlatform] = useState<'android' | 'ios' | 'huawei' | 'desktop'>('desktop');
   const [isClient, setIsClient] = useState(false);
   const [showPwaModal, setShowPwaModal] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -66,7 +69,54 @@ export default function LandingContent() {
               Accedi
             </Link>
           </div>
+
+          {/* Mobile Menu Button */}
+          <button 
+            className="md:hidden flex items-center justify-center p-2 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Menu"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="absolute top-full left-0 w-full bg-white/95 backdrop-blur-xl dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col p-6 gap-2 md:hidden animate-in slide-in-from-top-2 duration-200">
+            <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-semibold py-3 border-b border-slate-100 dark:border-slate-800/50">Funzionalità</a>
+            <a href="#innovation" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-semibold py-3 border-b border-slate-100 dark:border-slate-800/50">Innovazione</a>
+            <a href="#benefits" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-semibold py-3 border-b border-slate-100 dark:border-slate-800/50">Vantaggi</a>
+            
+            <div className="pt-6 flex flex-col gap-3">
+              <Link href="/sign-in" onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center rounded-2xl bg-slate-100 dark:bg-slate-800 px-5 py-4 font-semibold transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">
+                Accedi al tuo account
+              </Link>
+              
+              {isClient && platform === 'android' && (
+                <a 
+                  href="/downloads/silhouette-dev.apk" 
+                  download="silhouette-dev.apk"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full text-center rounded-2xl bg-blue-600 px-5 py-4 font-bold text-white shadow-xl shadow-blue-500/20 hover:bg-blue-700 flex items-center justify-center gap-2"
+                >
+                  <Download size={20} /> Scarica App (.APK)
+                </a>
+              )}
+
+              {isClient && platform === 'ios' && (
+                <button 
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setShowPwaModal(true);
+                  }}
+                  className="w-full text-center rounded-2xl bg-blue-600 px-5 py-4 font-bold text-white shadow-xl shadow-blue-500/20 hover:bg-blue-700 flex items-center justify-center gap-2"
+                >
+                  <Sparkles size={20} /> Installa su iOS
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </nav>
 
       <main>
