@@ -2,7 +2,6 @@ import {
   ArrowRightLeft,
   Bot,
   Home,
-  Layers,
   Menu,
   Package,
   Plus,
@@ -52,7 +51,6 @@ export type DashboardSectionItem = BaseNavigationItem & {
 export const SIDEBAR_ITEMS: SidebarItem[] = [
   { type: 'link', href: '/dashboard', label: 'Dashboard', icon: Home },
   { type: 'link', href: '/dashboard/products', label: 'Prodotti', icon: Package },
-  { type: 'link', href: '/dashboard/variants', label: 'Varianti', icon: Layers },
   { type: 'link', href: '/dashboard/inventory', label: 'Magazzino', icon: Warehouse },
   { type: 'link', href: '/dashboard/movements', label: 'Movimenti', icon: ArrowRightLeft },
   { type: 'link', href: '/dashboard/proposals', label: 'Proposte', icon: Search },
@@ -91,7 +89,6 @@ export const MORE_PAGE_LINKS: BaseNavigationItem[] = [
   { href: '/dashboard/assistant', label: 'Assistente AI' },
   { href: '/dashboard/movements', label: 'Movimenti' },
   { href: '/dashboard/proposals', label: 'Proposte' },
-  { href: '/dashboard/variants', label: 'Varianti' },
   { href: '/dashboard/users', label: 'Utenti e ruoli' },
   { href: '/dashboard/settings', label: 'Impostazioni' },
 ];
