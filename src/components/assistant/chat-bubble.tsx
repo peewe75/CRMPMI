@@ -8,15 +8,21 @@ interface ChatBubbleProps {
   text: string;
 }
 
-// Regex combinato: cattura **grassetto** oppure [proposta:ID]
-const INLINE_RE = /\*\*([^*]+)\*\*|\[proposta:([^\]]+)\]/g;
+// Regex combinato: cattura **grassetto** (anche con spazi interni) oppure [proposta:ID]
+const INLINE_RE = /\*\*\s*([^*]+?)\s*\*\*|\[proposta:([^\]]+)\]/g;
 
 /**
  * Converte il testo dell'assistente in JSX con:
  * - **testo** → <strong> (es. numeri in grassetto)
  * - [proposta:ID] → link cliccabile verso /dashboard/proposals
+ * - \n → <br />
  */
 function renderText(text: string): React.ReactNode {
+  // First, clean up common LLM formatting artifacts
+  const cleaned = text
+    .replace(/\*\*\s+/g, '**')  // "** 11" → "**11"
+    .replace(/\s+\*\*/g, '**'); // "movimenti **" → "movimenti**"
+
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -24,17 +30,18 @@ function renderText(text: string): React.ReactNode {
 
   INLINE_RE.lastIndex = 0; // reset per uso sicuro con flag /g
 
-  while ((match = INLINE_RE.exec(text)) !== null) {
+  while ((match = INLINE_RE.exec(cleaned)) !== null) {
     // Testo normale prima del match
     if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
+      parts.push(...splitNewlines(cleaned.slice(lastIndex, match.index), key));
+      key += 10;
     }
 
     if (match[1] !== undefined) {
       // **grassetto**
       parts.push(
         <strong key={key++} className="font-semibold">
-          {match[1]}
+          {match[1].trim()}
         </strong>,
       );
     } else if (match[2] !== undefined) {
@@ -54,11 +61,22 @@ function renderText(text: string): React.ReactNode {
   }
 
   // Testo rimanente dopo l'ultimo match
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
+  if (lastIndex < cleaned.length) {
+    parts.push(...splitNewlines(cleaned.slice(lastIndex), key));
   }
 
   return parts.length > 0 ? parts : text;
+}
+
+/** Split text by newlines, inserting <br /> elements */
+function splitNewlines(text: string, startKey: number): React.ReactNode[] {
+  const lines = text.split('\n');
+  const nodes: React.ReactNode[] = [];
+  lines.forEach((line, i) => {
+    if (i > 0) nodes.push(<br key={`br-${startKey}-${i}`} />);
+    if (line) nodes.push(line);
+  });
+  return nodes;
 }
 
 export function ChatBubble({ role, text }: ChatBubbleProps) {
