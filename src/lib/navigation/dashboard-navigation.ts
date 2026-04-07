@@ -1,5 +1,4 @@
 import {
-  ArrowRightLeft,
   Bot,
   Home,
   Menu,
@@ -52,7 +51,6 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   { type: 'link', href: '/dashboard', label: 'Dashboard', icon: Home },
   { type: 'link', href: '/dashboard/products', label: 'Prodotti', icon: Package },
   { type: 'link', href: '/dashboard/inventory', label: 'Magazzino', icon: Warehouse },
-  { type: 'link', href: '/dashboard/movements', label: 'Movimenti', icon: ArrowRightLeft },
   { type: 'link', href: '/dashboard/proposals', label: 'Proposte', icon: Search },
   {
     type: 'link',
@@ -87,7 +85,7 @@ export const DASHBOARD_SECTIONS: DashboardSectionItem[] = [
 export const MORE_PAGE_LINKS: BaseNavigationItem[] = [
   { href: '/dashboard/quick-add', label: 'Quick add' },
   { href: '/dashboard/assistant', label: 'Assistente AI' },
-  { href: '/dashboard/movements', label: 'Movimenti' },
+  { href: '/dashboard/inventory', label: 'Magazzino' },
   { href: '/dashboard/proposals', label: 'Proposte' },
   { href: '/dashboard/users', label: 'Utenti e ruoli' },
   { href: '/dashboard/settings', label: 'Impostazioni' },
