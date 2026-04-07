@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { requireFeatureEnabled } from '@/lib/auth/feature-flags';
 import { TOOL_DEFINITIONS, executeTool } from '@/modules/assistant/application/assistant-tools';
+import {
+  executeDailySummary,
+  executeCheckStock,
+  executeComparePeriod,
+} from '@/modules/assistant/application/assistant-tools';
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -30,10 +35,9 @@ setInterval(() => {
     if (now > entry.resetAt) rateLimitMap.delete(key);
   }
 }, 5 * 60_000);
+
 const FREE_MODELS = [
   'meta-llama/llama-3.3-70b-instruct:free',
-  'arcee-ai/trinity-large-preview:free',
-  'stepfun/step-3.5-flash:free',
   'google/gemma-3-27b-it:free',
 ];
 const MAX_TOOL_ROUNDS = 3;
@@ -52,6 +56,9 @@ const TOOL_STATUS_LABELS: Record<string, string> = {
   compare_period: 'Confronto i periodi...',
 };
 
+// ─── System prompt ───
+// NOTE: We do NOT mention tool names or brackets anywhere.
+// The LLM will receive pre-fetched data inline and just needs to talk about it.
 const SYSTEM_PROMPT = `Sei "Silhouette", l'assistente intelligenza artificiale per un negozio di calzature e pelletteria.
 
 PERSONALITÀ E STILE:
@@ -60,21 +67,78 @@ PERSONALITÀ E STILE:
 - Quando citi numeri importanti, mettili in grassetto (es. "**20 pezzi**", "**143 scarpe**").
 - Chiedi sempre alla fine: "Vuoi i dettagli?", "Ti dico quali?", o "Serve altro?".
 
-REGOLE SUI DATI E TOOL (INVIOLABILI):
-1) Quando chiami un tool (es. daily_summary), NON rispondere mai scrivendo il nome del tool tra parentesi quadre (es. sbagliato: "Ecco il riassunto: [daily_summary]"). 
-2) Devi sempre LEGGERE i dati reali che il tool ti restituisce in formato JSON, estrarre i numeri o le frasi, e formulare una risposta testuale usando parole tue.
-3) Le parentesi quadre sono consentite SOLO per i link alle proposte di inventario con il tag esatto: [proposta:ID] (sostituendo ID con l'ID restituito dal tool). Nessun altro tag è permesso.
-
-ESEMPI SU COME DEVI RISPONDERE (MOLTO IMPORTANTE):
-
-Utente: "Com'è andata oggi?"
-*Sistema ti passa il JSON: {"summary":"Oggi 20 pezzi venduti, 5 caricati"}*
-Risposta che devi dare all'utente: "Oggi abbiamo venduto **20 pezzi** e ne sono stati caricati **5**. Vuoi sapere quali modelli?"
-
-Utente: "Carica 2 paia di nike air."
-*Sistema ti passa il JSON: {"proposal_created":true,"proposal_id":"123-abc"}*
-Risposta che devi dare all'utente: "Ho creato la proposta per il carico. Puoi approvarla in questa sezione: [proposta:123-abc]."
+REGOLE IMPORTANTI:
+- Quando il messaggio dell'utente contiene una sezione "--- DATI DAL SISTEMA ---", quei dati sono REALI e aggiornati. Usali per rispondere in modo discorsivo. Non ripetere mai il JSON grezzo, ma estrai i valori e formulali come frasi naturali.
+- Quando proponi una modifica di magazzino (carico/scarico), il sistema ti fornirà l'ID della proposta. Indicalo come link usando questo formato esatto: [proposta:ID_PROPOSTA]. Es: [proposta:abc-123].
+- NON inventare dati. Se non hai informazioni, dì che non riesci a recuperarli.
 `;
+
+// ─── Intent Detection (keyword-based) ───
+// This is the KEY innovation: instead of relying on the LLM to call tools,
+// we detect the intent ourselves and pre-fetch the data.
+
+interface PrefetchResult {
+  toolName: string;
+  data: unknown;
+}
+
+async function detectAndPrefetch(userMessage: string): Promise<PrefetchResult | null> {
+  const lower = userMessage.toLowerCase().trim();
+
+  // Daily summary intent
+  if (
+    lower.includes('andata oggi') ||
+    lower.includes('riassunto') ||
+    lower.includes('sommario') ||
+    lower.includes('com\'è andata') ||
+    lower.includes('come è andata') ||
+    lower.includes('vendite di oggi') ||
+    lower.includes('vendite oggi') ||
+    lower.includes('movimenti di oggi') ||
+    lower.includes('giornata') ||
+    lower.includes('oggi come') ||
+    lower.includes('com\'è la giornata') ||
+    (lower.includes('oggi') && (lower.includes('vendut') || lower.includes('caricat') || lower.includes('moviment')))
+  ) {
+    console.log('[Silhouette AI] Intent detected: daily_summary');
+    const data = await executeDailySummary();
+    return { toolName: 'daily_summary', data };
+  }
+
+  // Compare period intent
+  if (
+    lower.includes('confronta') ||
+    lower.includes('confronto') ||
+    lower.includes('rispetto a ieri') ||
+    lower.includes('vs ieri') ||
+    lower.includes('settimana scorsa') ||
+    lower.includes('ieri vs oggi') ||
+    lower.includes('paragone')
+  ) {
+    console.log('[Silhouette AI] Intent detected: compare_period');
+    const period = lower.includes('settimana') ? 'this_week_vs_last_week' : 'today_vs_yesterday';
+    const data = await executeComparePeriod({ period });
+    return { toolName: 'compare_period', data };
+  }
+
+  // Stock check intent
+  if (
+    lower.includes('giacenz') ||
+    lower.includes('quante ne abbiamo') ||
+    lower.includes('quanti ne abbiamo') ||
+    lower.includes('in magazzino') ||
+    lower.includes('stock') ||
+    lower.includes('inventario')
+  ) {
+    console.log('[Silhouette AI] Intent detected: check_stock');
+    const data = await executeCheckStock({});
+    return { toolName: 'check_stock', data };
+  }
+
+  return null;
+}
+
+// ─── Types ───
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -116,7 +180,7 @@ async function callLLM(messages: ChatMessage[]) {
 
     if (res.ok) return res.json();
 
-    if (res.status === 429 || res.status === 404) {
+    if (res.status === 429 || res.status === 404 || res.status === 402) {
       console.warn(`[OpenRouter] ${model} → ${res.status}, trying next`);
       continue;
     }
@@ -127,8 +191,8 @@ async function callLLM(messages: ChatMessage[]) {
   throw new Error('Modelli AI temporaneamente non disponibili. Riprova tra poco.');
 }
 
-// Streaming call — used for final response
-async function callLLMStream(messages: ChatMessage[]) {
+// Simple non-streaming call WITHOUT tools — used for final formatting
+async function callLLMSimple(messages: ChatMessage[]) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY non configurata');
 
@@ -145,18 +209,16 @@ async function callLLMStream(messages: ChatMessage[]) {
       body: JSON.stringify({
         model,
         messages,
-        tools: TOOL_DEFINITIONS,
-        tool_choice: 'auto',
-        temperature: 0.3,
-        max_tokens: 1024,
-        stream: true,
+        temperature: 0.4,
+        max_tokens: 512,
+        // NO tools — just text formatting
       }),
     });
 
-    if (res.ok) return res;
+    if (res.ok) return res.json();
 
-    if (res.status === 429 || res.status === 404) {
-      console.warn(`[OpenRouter] stream ${model} → ${res.status}, trying next`);
+    if (res.status === 429 || res.status === 404 || res.status === 402) {
+      console.warn(`[OpenRouter simple] ${model} → ${res.status}, trying next`);
       continue;
     }
 
@@ -165,6 +227,8 @@ async function callLLMStream(messages: ChatMessage[]) {
 
   throw new Error('Modelli AI temporaneamente non disponibili. Riprova tra poco.');
 }
+
+// ─── POST Route Handler ───
 
 export async function POST(request: Request) {
   try {
@@ -194,13 +258,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'messages è obbligatorio' }, { status: 400 });
   }
 
-  const conversation: ChatMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
-    ...userMessages.map((m) => ({
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-    })),
-  ];
+  // Get the last user message for intent detection
+  const lastUserMsg = userMessages[userMessages.length - 1]?.content ?? '';
 
   const encoder = new TextEncoder();
 
@@ -211,7 +270,69 @@ export async function POST(request: Request) {
       };
 
       try {
-        // Tool loop — non-streaming rounds
+        // ══════════════════════════════════════════════════════
+        // STEP 1: Try to detect intent and pre-fetch data
+        // This bypasses unreliable LLM tool calling entirely.
+        // ══════════════════════════════════════════════════════
+        const prefetched = await detectAndPrefetch(lastUserMsg).catch((err) => {
+          console.warn('[Silhouette AI] Prefetch failed:', err);
+          return null;
+        });
+
+        if (prefetched) {
+          // We got data! Now send it to the LLM as inline context
+          // and ask it to just format a nice response.
+          send('status', { text: TOOL_STATUS_LABELS[prefetched.toolName] ?? 'Elaboro...' });
+
+          const dataJson = JSON.stringify(prefetched.data, null, 2);
+          console.log(`[Silhouette AI] Prefetched ${prefetched.toolName}:`, dataJson.substring(0, 300));
+
+          const messagesForLLM: ChatMessage[] = [
+            { role: 'system', content: SYSTEM_PROMPT },
+            // Include conversation history (all but the last message)
+            ...userMessages.slice(0, -1).map((m) => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+            })),
+            // Inject the last user message with pre-fetched data appended
+            {
+              role: 'user',
+              content: `${lastUserMsg}\n\n--- DATI DAL SISTEMA ---\n${dataJson}\n--- FINE DATI ---\n\nRispondimi in modo discorsivo usando i dati qui sopra. NON scrivere JSON, NON scrivere nomi di funzioni. Solo una risposta naturale in italiano.`,
+            },
+          ];
+
+          send('status', { text: 'Preparo la risposta...' });
+
+          const completion = await callLLMSimple(messagesForLLM);
+          const reply = completion.choices?.[0]?.message?.content ?? 'Non sono riuscito a elaborare i dati.';
+
+          // Sanitize: remove any accidental bracket tool names
+          const cleanReply = reply
+            .replace(/\[daily_summary\]/gi, '')
+            .replace(/\[check_stock\]/gi, '')
+            .replace(/\[compare_period\]/gi, '')
+            .replace(/\[process_command\]/gi, '')
+            .trim();
+
+          send('done', { reply: cleanReply || 'Dati elaborati ma nessuna risposta generata.' });
+          controller.close();
+          return;
+        }
+
+        // ══════════════════════════════════════════════════════
+        // STEP 2: No prefetch match — fall back to standard
+        // tool-calling flow for complex commands (process_command,
+        // process_document_image, search_by_barcode).
+        // ══════════════════════════════════════════════════════
+
+        const conversation: ChatMessage[] = [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...userMessages.map((m) => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          })),
+        ];
+
         let round = 0;
         while (round < MAX_TOOL_ROUNDS) {
           round++;
@@ -227,45 +348,41 @@ export async function POST(request: Request) {
           const message = choice.message;
           let toolCalls: ToolCall[] | undefined = message.tool_calls;
 
-          // LOG to server console for debugging
-          console.log('[Silhouette AI] LLM message:', message);
+          console.log('[Silhouette AI] LLM message (round', round, '):', JSON.stringify(message).substring(0, 500));
 
-          // HACK: Fallback parser for models that ignore tool formats and output [tool_name]
+          // HACK: Fallback parser for models that write [tool_name] as text
           if (!toolCalls?.length && message.content) {
             const foundTools: ToolCall[] = [];
             for (const def of TOOL_DEFINITIONS) {
-              if (message.content.includes(`[${def.function.name}]`) || message.content.includes(`call ${def.function.name}`)) {
+              const name = def.function.name;
+              if (message.content.includes(`[${name}]`) || message.content.includes(`call ${name}`)) {
                 foundTools.push({
                   id: `call_${Math.random().toString(36).substring(2)}`,
                   type: 'function',
-                  function: { name: def.function.name, arguments: '{}' },
+                  function: { name, arguments: '{}' },
                 });
               }
             }
             if (foundTools.length > 0) {
-              console.log('[Silhouette AI] Intercepted raw text tool calls:', foundTools);
+              console.log('[Silhouette AI] Intercepted text-based tool calls:', foundTools.map(t => t.function.name));
               toolCalls = foundTools;
             }
           }
 
-          // No tool calls → stream the final response
+          // No tool calls → final response
           if (!toolCalls?.length) {
-            // This round already gave us a complete text response — send it and exit
             let finalReply = message.content ?? 'Non ho una risposta.';
-            // Clean up any stray string brackets that the LLM might have output
-            finalReply = finalReply.replace(/\[daily_summary\]/gi, '');
-            finalReply = finalReply.replace(/\[check_stock\]/gi, '');
-            
-            send('done', { reply: finalReply });
+            // Clean any stray bracket artifacts
+            finalReply = finalReply.replace(/\[(daily_summary|check_stock|compare_period|process_command|search_by_barcode|process_document_image)\]/gi, '');
+            send('done', { reply: finalReply.trim() });
             controller.close();
             return;
           }
 
-          // Execute tools
+          // Execute tool calls
           conversation.push({
             role: 'assistant',
-            // If the model hallucinated the tool call in text, don't poison the history with it
-            content: message.content && message.content.includes('[') && !message.content.includes('proposta:') ? null : message.content,
+            content: null, // Don't pass hallucinated text back
             tool_calls: toolCalls,
           });
 
@@ -297,48 +414,12 @@ export async function POST(request: Request) {
           // Continue loop — next round will generate final response
         }
 
-        // After tool rounds, stream the final LLM response
+        // After max tool rounds, get final response without tools
         send('status', { text: 'Preparo la risposta...' });
+        const finalCompletion = await callLLMSimple(conversation);
+        const finalText = finalCompletion.choices?.[0]?.message?.content ?? 'Ho completato le operazioni.';
+        send('done', { reply: finalText });
 
-        const streamRes = await callLLMStream(conversation);
-        const reader = streamRes.body?.getReader();
-        if (!reader) {
-          send('done', { reply: 'Errore nella risposta.' });
-          controller.close();
-          return;
-        }
-
-        const decoder = new TextDecoder();
-        let fullText = '';
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? '';
-
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const payload = line.slice(6).trim();
-            if (payload === '[DONE]') continue;
-
-            try {
-              const chunk = JSON.parse(payload);
-              const delta = chunk.choices?.[0]?.delta?.content;
-              if (delta) {
-                fullText += delta;
-                send('delta', { text: delta });
-              }
-            } catch {
-              // skip malformed chunks
-            }
-          }
-        }
-
-        send('done', { reply: fullText || 'Ho completato le operazioni.' });
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Errore sconosciuto';
         console.error('[Chat API Error]', msg);
