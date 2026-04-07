@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Send, Volume2, VolumeOff, Package, BarChart2, Upload, ShoppingBag, Paperclip, X, Loader2, FileImage } from 'lucide-react';
+import { Mic, MicOff, Send, Volume2, VolumeOff, Package, BarChart2, Upload, ShoppingBag, Paperclip, Camera, X, Loader2, FileImage } from 'lucide-react';
 import { useVoiceInput } from '@/hooks/use-voice-input';
 import { AssistantAvatar } from '@/components/assistant/assistant-avatar';
 import { ChatBubble } from '@/components/assistant/chat-bubble';
@@ -66,6 +66,7 @@ export default function AssistantPage() {
   const lastTranscriptRef = useRef('');
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -444,7 +445,7 @@ export default function AssistantPage() {
             </button>
           )}
 
-          {/* File input (hidden) */}
+          {/* File input (hidden) — gallery/file picker */}
           <input 
             type="file" 
             ref={fileInputRef} 
@@ -453,6 +454,18 @@ export default function AssistantPage() {
             accept="image/*,application/pdf"
             title="Allega documento"
             aria-label="Allega documento"
+          />
+
+          {/* Camera input (hidden) — opens camera directly on mobile */}
+          <input 
+            type="file" 
+            ref={cameraInputRef} 
+            onChange={handleFileUpload} 
+            className="hidden" 
+            accept="image/*"
+            capture="environment"
+            title="Scatta foto"
+            aria-label="Scatta foto al documento"
           />
 
           {/* Text input */}
@@ -464,6 +477,18 @@ export default function AssistantPage() {
             className="flex flex-1 items-center gap-2"
           >
             <div className="relative flex-1 flex items-center gap-2">
+              {/* Camera button — mobile only */}
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={isProcessing || uploadingFile}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/60 text-gray-500 shadow-sm transition-all hover:bg-white hover:text-blue-600 disabled:opacity-50 md:hidden"
+                title="Scatta foto"
+              >
+                {uploadingFile ? <Loader2 className="h-5 w-5 animate-spin text-blue-500" /> : <Camera className="h-5 w-5" />}
+              </button>
+
+              {/* Paperclip button — file picker */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
