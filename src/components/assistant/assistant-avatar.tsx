@@ -3,11 +3,13 @@
 import { cn } from '@/lib/utils/cn';
 
 interface AssistantAvatarProps {
-  isSpeaking: boolean;
-  isListening: boolean;
+  isSpeaking?: boolean;
+  isListening?: boolean;
   status?: 'idle' | 'success' | 'warning' | 'error';
   className?: string;
 }
+
+export { type AssistantAvatarProps };
 
 const STATUS_COLORS = {
   idle:    { stroke: '#3b82f6', glow: 'rgba(59,130,246,0.3)',  glowStrong: 'rgba(59,130,246,0.5)'  },
@@ -16,7 +18,7 @@ const STATUS_COLORS = {
   error:   { stroke: '#ef4444', glow: 'rgba(239,68,68,0.3)',   glowStrong: 'rgba(239,68,68,0.5)'   },
 };
 
-export function AssistantAvatar({ isSpeaking, isListening, status = 'idle', className }: AssistantAvatarProps) {
+export function AssistantAvatar({ isSpeaking = false, isListening = false, status = 'idle', className }: AssistantAvatarProps) {
   const colors = STATUS_COLORS[status];
   const strokeColor = colors.stroke;
   const pupilOpacity = isSpeaking ? 0.9 : 0.7;

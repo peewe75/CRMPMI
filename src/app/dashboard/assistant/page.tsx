@@ -1,13 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Send, Volume2, VolumeOff, Package, BarChart2, Upload, ShoppingBag, Paperclip, Camera, X, Loader2, FileImage } from 'lucide-react';
-import { useVoiceInput } from '@/hooks/use-voice-input';
+import { useEffect, useRef, useState } from 'react';
+import { Send, Package, BarChart2, Upload, ShoppingBag, Paperclip, Camera, X, Loader2, FileImage } from 'lucide-react';
 import { AssistantAvatar } from '@/components/assistant/assistant-avatar';
 import { ChatBubble } from '@/components/assistant/chat-bubble';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/spinner';
 
 interface Message {
   id: string;
@@ -49,21 +47,17 @@ function saveMessages(messages: Message[]) {
 }
 
 export default function AssistantPage() {
-  const { isListening, transcript, error: voiceError, isSupported, startListening, stopListening, resetTranscript } =
-    useVoiceInput();
 
   const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState('');
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [speechEnabled, setSpeechEnabled] = useState(true);
+
   const [avatarStatus, setAvatarStatus] = useState<'idle' | 'success' | 'warning' | 'error'>('idle');
   const [uploadingFile, setUploadingFile] = useState(false);
   const [attachedDocument, setAttachedDocument] = useState<{ id: string; name: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const lastTranscriptRef = useRef('');
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -81,32 +75,9 @@ export default function AssistantPage() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, statusText]);
 
-  useEffect(() => {
-    if (!isListening && transcript && transcript !== lastTranscriptRef.current) {
-      lastTranscriptRef.current = transcript;
-      handleSend(transcript);
-      resetTranscript();
-    }
-  }, [isListening, transcript]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const speak = useCallback(
-    (text: string) => {
-      if (!speechEnabled || typeof window === 'undefined' || !window.speechSynthesis) return;
 
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'it-IT';
-      utterance.rate = 1.05;
-      utterance.pitch = 1;
 
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-
-      window.speechSynthesis.speak(utterance);
-    },
-    [speechEnabled],
-  );
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -246,9 +217,7 @@ export default function AssistantPage() {
         }
       }
 
-      if (fullText) {
-        speak(fullText);
-      }
+
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       const errorText = err instanceof Error ? err.message : 'Errore di comunicazione con il server';
@@ -269,42 +238,27 @@ export default function AssistantPage() {
     localStorage.removeItem(STORAGE_KEY);
   }
 
-  function toggleSpeech() {
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-    }
-    setSpeechEnabled((prev) => !prev);
-  }
+
 
   return (
     <div className="mesh-bg relative flex h-[calc(100dvh-4rem-5rem)] flex-col md:h-[calc(100dvh-4rem)]">
       <div className="noise-overlay" />
       
       {/* Header */}
-        <div className="glass sticky top-0 z-10 flex items-center justify-between px-4 py-3 dark:bg-slate-900/70 dark:border-slate-700">
+      <div className="glass sticky top-0 z-10 flex items-center justify-between px-4 py-3 dark:bg-slate-900/70 dark:border-slate-700">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 animate-pulse rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
           <h1 className="text-xs font-bold tracking-tight text-gray-900 md:text-sm uppercase">Assistente Silhouette</h1>
         </div>
-        <div className="flex items-center gap-1.5">
-          {messages.length > 0 && (
-            <button
-              onClick={clearHistory}
-              className="rounded-full bg-gray-100/50 px-3 py-1 text-[10px] font-medium text-gray-600 transition hover:bg-gray-200/80 hover:text-gray-900"
-              title="Cancella cronologia"
-            >
-              Clear
-            </button>
-          )}
+        {messages.length > 0 && (
           <button
-            onClick={toggleSpeech}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100/50 text-gray-600 transition hover:bg-gray-200/80 hover:text-gray-900"
-            title={speechEnabled ? 'Disattiva voce' : 'Attiva voce'}
+            onClick={clearHistory}
+            className="rounded-full bg-gray-100/50 px-3 py-1 text-[10px] font-medium text-gray-600 transition hover:bg-gray-200/80 hover:text-gray-900"
+            title="Cancella cronologia"
           >
-            {speechEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeOff className="h-3.5 w-3.5" />}
+            Clear
           </button>
-        </div>
+        )}
       </div>
 
       {/* Progress bar — visible during processing */}
@@ -325,20 +279,18 @@ export default function AssistantPage() {
         {/* Avatar section */}
         <div className="flex flex-col items-center pb-6 pt-8 md:pb-10 md:pt-12">
           <div className="relative">
-            <div className={`absolute inset-0 -m-4 animate-pulse rounded-full bg-blue-500/10 blur-2xl transition-opacity duration-1000 ${isSpeaking || isListening ? 'opacity-100' : 'opacity-0'}`} />
+            <div className={`absolute inset-0 -m-4 animate-pulse rounded-full bg-blue-500/10 blur-2xl transition-opacity duration-1000 ${isProcessing ? 'opacity-100' : 'opacity-0'}`} />
             <AssistantAvatar
-              isSpeaking={isSpeaking}
-              isListening={isListening}
               status={avatarStatus}
               className="relative h-32 w-24 md:h-44 md:w-32"
             />
           </div>
           <div className="mt-5 flex flex-col items-center gap-1">
             <p className="text-[11px] font-semibold tracking-widest text-blue-500 uppercase">
-              {isListening ? 'Listening' : isSpeaking ? 'Speaking' : isProcessing ? 'Thinking' : 'Online'}
+              {isProcessing ? 'Thinking' : 'Online'}
             </p>
             <p className="max-w-[80%] text-center text-xs font-medium text-gray-500 md:text-sm">
-              {statusText || (isListening ? 'Ti ascolto...' : isSpeaking ? 'Sto rispondendo...' : 'Come posso aiutarti oggi?')}
+              {statusText || 'Come posso aiutarti oggi?'}
             </p>
           </div>
         </div>
@@ -414,36 +366,10 @@ export default function AssistantPage() {
           </div>
         )}
 
-        {/* Interim transcript preview */}
-        {isListening && transcript && (
-          <div className="mb-4 flex animate-in fade-in slide-in-from-bottom-1 items-center gap-2 rounded-xl bg-blue-50/50 p-3 text-xs italic text-blue-600 backdrop-blur-md">
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
-            &ldquo;{transcript}&rdquo;
-          </div>
-        )}
 
-        {/* Voice error */}
-        {voiceError && (
-          <div className="mb-4 rounded-xl bg-red-50/50 p-3 text-xs text-red-600 backdrop-blur-md">
-            {voiceError}
-          </div>
-        )}
 
         <div className="flex items-center gap-3">
-          {/* Mic button */}
-          {mounted && isSupported && (
-            <button
-              onClick={isListening ? stopListening : startListening}
-              disabled={isProcessing}
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
-                isListening
-                  ? 'animate-pulse bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]'
-                  : 'bg-blue-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.25)] hover:scale-105 hover:bg-blue-500 hover:shadow-[0_6px_16px_rgba(37,99,235,0.3)]'
-              } disabled:opacity-40`}
-            >
-              {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-            </button>
-          )}
+
 
           {/* File input (hidden) — gallery/file picker */}
           <input 
