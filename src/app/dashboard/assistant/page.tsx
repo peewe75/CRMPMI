@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Send, Volume2, VolumeOff, Package, BarChart2, Upload, ShoppingBag } from 'lucide-react';
+import { Mic, MicOff, Send, Volume2, VolumeOff, Package, BarChart2, Upload, ShoppingBag, Paperclip, X, Loader2, FileImage } from 'lucide-react';
 import { useVoiceInput } from '@/hooks/use-voice-input';
 import { AssistantAvatar } from '@/components/assistant/assistant-avatar';
 import { ChatBubble } from '@/components/assistant/chat-bubble';
@@ -60,9 +60,12 @@ export default function AssistantPage() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speechEnabled, setSpeechEnabled] = useState(true);
   const [avatarStatus, setAvatarStatus] = useState<'idle' | 'success' | 'warning' | 'error'>('idle');
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [attachedDocument, setAttachedDocument] = useState<{ id: string; name: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastTranscriptRef = useRef('');
   const abortRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -104,18 +107,59 @@ export default function AssistantPage() {
     [speechEnabled],
   );
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingFile(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('document_type', 'unknown');
+    formData.append('source_channel', 'chat');
+
+    try {
+      const res = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error('Errore nel caricamento del file');
+      }
+
+      const data = await res.json();
+      setAttachedDocument({ id: data.document.id, name: file.name });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Errore durante il caricamento');
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }
+
   async function handleSend(text?: string) {
-    const message = (text ?? inputText).trim();
-    if (!message || isProcessing) return;
+    let message = (text ?? inputText).trim();
+    if ((!message && !attachedDocument) || isProcessing) return;
+
+    if (!message && attachedDocument) {
+      message = "Ho caricato un file. Per favore analizzalo.";
+    }
+
+    const visibleText = attachedDocument
+      ? `📎 ${attachedDocument.name} (Traccia ID: ${attachedDocument.id})\n\n${message}`
+      : message;
 
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const userMsg: Message = { id: crypto.randomUUID(), role: 'user', text: message };
+    const userMsg: Message = { id: crypto.randomUUID(), role: 'user', text: visibleText };
     const allMessages = [...messages, userMsg];
     setMessages(allMessages);
     setInputText('');
+    setAttachedDocument(null);
     setIsProcessing(true);
     setStatusText('');
     setAvatarStatus('idle');
@@ -353,6 +397,22 @@ export default function AssistantPage() {
 
       {/* Input bar section */}
       <div className="glass safe-bottom border-t border-white/20 p-4">
+        
+        {/* Attached file preview chip */}
+        {attachedDocument && (
+          <div className="mb-3 inline-flex animate-in fade-in slide-in-from-bottom-2 items-center gap-2 rounded-lg bg-blue-50 px-3 py-1.5 text-sm text-blue-700 shadow-sm ring-1 ring-blue-600/20">
+            <FileImage className="h-4 w-4" />
+            <span className="max-w-[200px] truncate font-medium">{attachedDocument.name}</span>
+            <button
+              onClick={() => setAttachedDocument(null)}
+              className="ml-1 flex h-5 w-5 items-center justify-center rounded-full hover:bg-blue-100/80"
+              title="Rimuovi allegato"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Interim transcript preview */}
         {isListening && transcript && (
           <div className="mb-4 flex animate-in fade-in slide-in-from-bottom-1 items-center gap-2 rounded-xl bg-blue-50/50 p-3 text-xs italic text-blue-600 backdrop-blur-md">
@@ -384,6 +444,17 @@ export default function AssistantPage() {
             </button>
           )}
 
+          {/* File input (hidden) */}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            className="hidden" 
+            accept="image/*,application/pdf"
+            title="Allega documento"
+            aria-label="Allega documento"
+          />
+
           {/* Text input */}
           <form
             onSubmit={(e) => {
@@ -392,22 +463,34 @@ export default function AssistantPage() {
             }}
             className="flex flex-1 items-center gap-2"
           >
-            <div className="relative flex-1">
-              <Input
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="Scrivi un messaggio..."
-                disabled={isProcessing}
-                className="h-12 rounded-2xl border-white/40 bg-white/60 pl-4 pr-12 focus-visible:ring-blue-500/30"
-              />
-              <Button
-                type="submit"
-                disabled={!inputText.trim() || isProcessing}
-                size="icon"
-                className="absolute right-1 top-1 h-10 w-10 rounded-xl bg-blue-600 hover:bg-blue-500"
+            <div className="relative flex-1 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessing || uploadingFile}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/60 text-gray-500 shadow-sm transition-all hover:bg-white hover:text-blue-600 disabled:opacity-50"
+                title="Allega file"
               >
-                <Send className="h-4 w-4" />
-              </Button>
+                {uploadingFile ? <Loader2 className="h-5 w-5 animate-spin text-blue-500" /> : <Paperclip className="h-5 w-5" />}
+              </button>
+
+              <div className="relative flex-1">
+                <Input
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder={attachedDocument ? "Aggiungi un messaggio opzionale..." : "Scrivi un messaggio..."}
+                  disabled={isProcessing}
+                  className="h-12 rounded-2xl border-white/40 bg-white/60 pl-4 pr-12 focus-visible:ring-blue-500/30"
+                />
+                <Button
+                  type="submit"
+                  disabled={(!inputText.trim() && !attachedDocument) || isProcessing || uploadingFile}
+                  size="icon"
+                  className="absolute right-1 top-1 h-10 w-10 rounded-xl bg-blue-600 hover:bg-blue-500"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </form>
         </div>
