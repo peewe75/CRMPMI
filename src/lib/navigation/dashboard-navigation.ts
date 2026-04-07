@@ -1,14 +1,11 @@
 import {
   ArrowRightLeft,
   Bot,
-  FileText,
   Home,
   Layers,
   Menu,
-  Mic,
   Package,
   Plus,
-  ScanBarcode,
   Search,
   Settings,
   Users,
@@ -61,32 +58,9 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   { type: 'link', href: '/dashboard/proposals', label: 'Proposte', icon: Search },
   {
     type: 'link',
-    href: '/dashboard/documents',
-    label: 'Documenti',
-    icon: FileText,
-    feature: 'document_import',
-  },
-  {
-    type: 'link',
     href: '/dashboard/assistant',
     label: 'Assistente',
     icon: Bot,
-    feature: 'voice_input',
-  },
-  { type: 'separator', label: 'Strumenti' },
-  {
-    type: 'link',
-    href: '/dashboard/scan',
-    label: 'Scanner',
-    icon: ScanBarcode,
-    feature: 'barcode_scan',
-  },
-  {
-    type: 'link',
-    href: '/dashboard/voice',
-    label: 'Input Vocale',
-    icon: Mic,
-    feature: 'voice_input',
   },
   { type: 'separator', label: 'Impostazioni' },
   { type: 'link', href: '/dashboard/users', label: 'Utenti', icon: Users },
@@ -96,42 +70,25 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
 export const MOBILE_NAV_ITEMS: MobileNavItem[] = [
   { href: '/dashboard', label: 'Home', icon: Home },
   { href: '/dashboard/products', label: 'Prodotti', icon: Package },
-  { href: '/dashboard/assistant', label: 'AI', icon: Bot, feature: 'voice_input' },
-  { href: '/dashboard/documents', label: 'Documenti', icon: FileText, feature: 'document_import' },
+  { href: '/dashboard/assistant', label: 'Assistente', icon: Bot },
   { href: '/dashboard/more', label: 'Altro', icon: Menu },
 ];
 
 export const DASHBOARD_QUICK_ACTIONS: QuickActionItem[] = [
-  { href: '/dashboard/scan', label: 'Scansiona', icon: ScanBarcode, color: 'bg-blue-500', feature: 'barcode_scan' },
   { href: '/dashboard/quick-add', label: 'Quick Add', icon: Plus, color: 'bg-green-500' },
-  { href: '/dashboard/voice', label: 'Voce', icon: Mic, color: 'bg-purple-500', feature: 'voice_input' },
-  { href: '/dashboard/assistant', label: 'Assistente', icon: Bot, color: 'bg-cyan-500', feature: 'voice_input' },
-  {
-    href: '/dashboard/documents/upload',
-    label: 'Carica Doc',
-    icon: FileText,
-    color: 'bg-orange-500',
-    feature: 'document_import',
-  },
+  { href: '/dashboard/assistant', label: 'Assistente', icon: Bot, color: 'bg-cyan-500' },
 ];
 
 export const DASHBOARD_SECTIONS: DashboardSectionItem[] = [
   { href: '/dashboard/products', label: 'Prodotti', icon: Package, desc: 'Gestisci catalogo' },
   { href: '/dashboard/inventory', label: 'Magazzino', icon: Warehouse, desc: 'Scorte e movimenti' },
-  {
-    href: '/dashboard/documents',
-    label: 'Documenti',
-    icon: FileText,
-    desc: 'DDT e fatture',
-    feature: 'document_import',
-  },
+  { href: '/dashboard/assistant', label: 'Assistente', icon: Bot, desc: 'DDT, fatture e supporto AI' },
   { href: '/dashboard/products?search=true', label: 'Cerca', icon: Search, desc: 'Cerca articolo' },
 ];
 
 export const MORE_PAGE_LINKS: BaseNavigationItem[] = [
   { href: '/dashboard/quick-add', label: 'Quick add' },
-  { href: '/dashboard/voice', label: 'Input vocale', feature: 'voice_input' },
-  { href: '/dashboard/assistant', label: 'Assistente AI', feature: 'voice_input' },
+  { href: '/dashboard/assistant', label: 'Assistente AI' },
   { href: '/dashboard/movements', label: 'Movimenti' },
   { href: '/dashboard/proposals', label: 'Proposte' },
   { href: '/dashboard/variants', label: 'Varianti' },
