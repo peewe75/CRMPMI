@@ -52,35 +52,29 @@ const TOOL_STATUS_LABELS: Record<string, string> = {
   compare_period: 'Confronto i periodi...',
 };
 
-const SYSTEM_PROMPT = `Sei "Silhouette", l'assistente di un negozio di calzature e pelletteria. Parli con il titolare o un commesso che lavora in negozio.
+const SYSTEM_PROMPT = `Sei "Silhouette", l'assistente intelligenza artificiale per un negozio di calzature e pelletteria.
 
-PERSONALITÀ:
-- Sei colloquiale, simpatico e professionale. Come un collega fidato.
-- Se l'utente ti saluta, rispondi con naturalezza: "Ciao! Dimmi pure" o "Eccomi, cosa ti serve?". Non elencare le tue funzionalità a meno che non te lo chieda.
-- Usa il "tu". Niente formalità eccessive.
-- Rispondi SEMPRE in italiano.
+PERSONALITÀ E STILE:
+- Sei colloquiale, professionale e amichevole. Usa sempre il "tu" e rispondi in italiano.
+- Risposte molto brevi, fluide e dirette. Niente elenchi puntati lunghi se non necessari.
+- Quando citi numeri importanti, mettili in grassetto (es. "**20 pezzi**", "**143 scarpe**").
+- Chiedi sempre alla fine: "Vuoi i dettagli?", "Ti dico quali?", o "Serve altro?".
 
-STILE:
-- Risposte brevi e dirette, come se parlassi ad alta voce. No tabelle, no elenchi puntati.
-- Quando dai un dato numerico importante, mettilo in grassetto con **numero**. Esempi: "Hai **143 scarpe**", "Oggi hai venduto **8 pezzi**", "Restano **3 paia** del 42".
-- Metti in grassetto anche nomi di categorie chiave se utile: "**Scarpe donna**: 89 pezzi, **Scarpe uomo**: 54 pezzi."
-- Usa il grassetto con parsimonia: solo per numeri e termini davvero importanti, non per tutto.
-- Alla fine chiedi sempre se vuole saperne di più: "Vuoi i dettagli?", "Ti dico quali?", "Serve altro?".
-- Quando l'utente conferma ("sì", "ok", "vai", "crea la proposta"), esegui subito senza richiedere conferma.
+REGOLE SUI DATI E TOOL (INVIOLABILI):
+1) Quando chiami un tool (es. daily_summary), NON rispondere mai scrivendo il nome del tool tra parentesi quadre (es. sbagliato: "Ecco il riassunto: [daily_summary]"). 
+2) Devi sempre LEGGERE i dati reali che il tool ti restituisce in formato JSON, estrarre i numeri o le frasi, e formulare una risposta testuale usando parole tue.
+3) Le parentesi quadre sono consentite SOLO per i link alle proposte di inventario con il tag esatto: [proposta:ID] (sostituendo ID con l'ID restituito dal tool). Nessun altro tag è permesso.
 
-REGOLE:
-- NON creare MAI movimenti di magazzino direttamente. Crea sempre una Proposta in stato "pending_review" e avvisa l'utente di approvarla dalla sezione Proposte.
-- Quando crei una proposta, includi SEMPRE nella risposta il testo esatto "[proposta:ID]" sostituendo ID con il proposal_id restituito dal tool. Esempio: "Ho creato la proposta [proposta:abc-123]. Vai nella sezione Proposte per approvarla!"
-- IMPORTANTE: Non usare MAI parentesi quadre inventando tag come "[daily_summary]" o "[check_stock]". Usa le parentesi quadre SOLO ed ESCLUSIVAMENTE per le proposte. Per il resto, leggi i dati restituiti dal tool e scrivili a parole tue.
+ESEMPI SU COME DEVI RISPONDERE (MOLTO IMPORTANTE):
 
-TOOL:
-- Giacenze e stock: usa check_stock. Filtra per categoria usando "by_category" (scarpe, borse, accessori, abbigliamento).
-- Carico/scarico/rettifica: usa process_command. Quando l'utente vuole procedere, passa create_proposal=true.
-- Riassunto giornata: usa daily_summary. Riporta i numeri effettivi restituiti ("venduti:", "caricati:").
-- Fattura o documento caricato: usa process_document_image.
-- Codice a barre: usa search_by_barcode. L'utente dice "cerca barcode 8012345678901" o simile.
-- Confronto periodi: usa compare_period. L'utente chiede "com'è andata oggi rispetto a ieri?" o "confronta questa settimana con la scorsa".
-- Domande generiche, saluti, chiacchiere: rispondi direttamente senza tool.`;
+Utente: "Com'è andata oggi?"
+*Sistema ti passa il JSON: {"summary":"Oggi 20 pezzi venduti, 5 caricati"}*
+Risposta che devi dare all'utente: "Oggi abbiamo venduto **20 pezzi** e ne sono stati caricati **5**. Vuoi sapere quali modelli?"
+
+Utente: "Carica 2 paia di nike air."
+*Sistema ti passa il JSON: {"proposal_created":true,"proposal_id":"123-abc"}*
+Risposta che devi dare all'utente: "Ho creato la proposta per il carico. Puoi approvarla in questa sezione: [proposta:123-abc]."
+`;
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -231,12 +225,38 @@ export async function POST(request: Request) {
           }
 
           const message = choice.message;
-          const toolCalls: ToolCall[] | undefined = message.tool_calls;
+          let toolCalls: ToolCall[] | undefined = message.tool_calls;
+
+          // LOG to server console for debugging
+          console.log('[Silhouette AI] LLM message:', message);
+
+          // HACK: Fallback parser for models that ignore tool formats and output [tool_name]
+          if (!toolCalls?.length && message.content) {
+            const foundTools: ToolCall[] = [];
+            for (const def of TOOL_DEFINITIONS) {
+              if (message.content.includes(`[${def.function.name}]`) || message.content.includes(`call ${def.function.name}`)) {
+                foundTools.push({
+                  id: `call_${Math.random().toString(36).substring(2)}`,
+                  type: 'function',
+                  function: { name: def.function.name, arguments: '{}' },
+                });
+              }
+            }
+            if (foundTools.length > 0) {
+              console.log('[Silhouette AI] Intercepted raw text tool calls:', foundTools);
+              toolCalls = foundTools;
+            }
+          }
 
           // No tool calls → stream the final response
           if (!toolCalls?.length) {
             // This round already gave us a complete text response — send it and exit
-            send('done', { reply: message.content ?? 'Non ho una risposta.' });
+            let finalReply = message.content ?? 'Non ho una risposta.';
+            // Clean up any stray string brackets that the LLM might have output
+            finalReply = finalReply.replace(/\[daily_summary\]/gi, '');
+            finalReply = finalReply.replace(/\[check_stock\]/gi, '');
+            
+            send('done', { reply: finalReply });
             controller.close();
             return;
           }
@@ -244,7 +264,8 @@ export async function POST(request: Request) {
           // Execute tools
           conversation.push({
             role: 'assistant',
-            content: message.content ?? null,
+            // If the model hallucinated the tool call in text, don't poison the history with it
+            content: message.content && message.content.includes('[') && !message.content.includes('proposta:') ? null : message.content,
             tool_calls: toolCalls,
           });
 
